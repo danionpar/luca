@@ -59,6 +59,26 @@ test("parses charges and classifies negative amounts as payments", () => {
   assert.equal(credit.amount, -30000);
 });
 
+test("falls back to a merged merchant/city capture when only one space separates them", () => {
+  const result = parseStatementText(fixture);
+  const merged = result.transactions.find((t) => t.referenceCode === "123456789014");
+
+  assert.ok(merged, "expected the single-space row to still be captured rather than dropped");
+  assert.equal(merged.date, "2025-03-17");
+  assert.equal(merged.amount, 8000);
+  assert.equal(merged.section, "single");
+  assert.match(
+    merged.merchant,
+    /TIENDA EJEMPLO CUATRO/,
+    "expected the merged field to still contain the merchant words",
+  );
+  assert.match(
+    merged.merchant,
+    /VALPARAISO/,
+    "expected the merged field to also contain the city, since the boundary between them was unrecoverable",
+  );
+});
+
 test("stops at the international statement section", () => {
   const result = parseStatementText(fixture);
 

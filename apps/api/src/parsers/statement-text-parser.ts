@@ -47,6 +47,15 @@ function normalizeWhitespace(raw: string): string {
 // Matches: LUGAR DD/MM/AA CÓDIGO COMERCIO CIUDAD $ MONTO $ MONTO CUOTA $ CUOTA
 const SINGLE_RE = /^(.+?)\s+(\d{2}\/\d{2}\/\d{2})\s+(\d{9,18})\s+(.+?)\s{2,}(\S+.*?)\s+\$\s+([-\d.]+)\s+\$\s+([-\d.]+)\s+(\d{2}\/\d{2})\s+\$\s+([-\d.]+)/;
 
+// Fallback for rows where the extractor could not recover the merchant/city
+// boundary (pdf.js sometimes merges reference code, merchant and city into
+// one text item with uniform single spaces, so no \s{2,} exists anywhere in
+// the line). Identical to SINGLE_RE except merchant and city are captured
+// together as one field rather than split. Dropping a real transaction over
+// an unrecoverable cosmetic field boundary is worse than keeping it with a
+// merged merchant/city string, so this is tried only after SINGLE_RE fails.
+const SINGLE_MERGED_RE = /^(.+?)\s+(\d{2}\/\d{2}\/\d{2})\s+(\d{9,18})\s+(.+?)\s+\$\s+([-\d.]+)\s+\$\s+([-\d.]+)\s+(\d{2}\/\d{2})\s+\$\s+([-\d.]+)/;
+
 // Matches installment: has "TASA INT." in the line
 const INSTALLMENT_RE = /^(.+?)\s+(\d{2}\/\d{2}\/\d{2})\s+(\d{9,18})\s+(.+?)\s+TASA\s+INT[.\s]+([\d,]+)\s*%\s+\$\s+([-\d.]+)\s+\$\s+([-\d.]+)\s+(\d{2}\/\d{2})\s+\$\s+([-\d.]+)/;
 
@@ -131,6 +140,24 @@ export function parseStatementText(text: string): ParsedStatement {
         location: normalizeWhitespace(sm[1]),
         amount: amt,
         installment: sm[8],
+        interestRate: null,
+        section: amt < 0 ? "payment" : (currentSection === "charges" ? "charge" : "single"),
+      });
+      continue;
+    }
+
+    // Fall back to a merged merchant/city capture when SINGLE_RE could not
+    // find a two-or-more-space boundary between them.
+    const smm = line.match(SINGLE_MERGED_RE);
+    if (smm) {
+      const amt = parseAmount(smm[8]);
+      transactions.push({
+        date: parseDate(smm[2]),
+        referenceCode: smm[3],
+        merchant: normalizeWhitespace(smm[4]),
+        location: normalizeWhitespace(smm[1]),
+        amount: amt,
+        installment: smm[7],
         interestRate: null,
         section: amt < 0 ? "payment" : (currentSection === "charges" ? "charge" : "single"),
       });
