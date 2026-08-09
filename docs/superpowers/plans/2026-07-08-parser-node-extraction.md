@@ -616,8 +616,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 
-import { extractPdfText } from "./pdf-text.ts";
-import { parseStatementText } from "./statement-text-parser.ts";
+import { extractPdfText } from "./pdf-text.js";
+import { parseStatementText } from "./statement-text-parser.js";
 
 const REFERENCE_PATH = ".local/reference-text.txt";
 const pdfPath = process.env.REFERENCE_PDF_PATH;
@@ -834,9 +834,9 @@ is preserved."
 Replace the whole file:
 
 ```typescript
-import { extractPdfText } from "./pdf-text.ts";
-import { parseStatementText } from "./statement-text-parser.ts";
-import type { ParsedStatement, ParsedTransaction } from "./statement-text-parser.ts";
+import { extractPdfText } from "./pdf-text.js";
+import { parseStatementText } from "./statement-text-parser.js";
+import type { ParsedStatement, ParsedTransaction } from "./statement-text-parser.js";
 
 export type { ParsedStatement, ParsedTransaction };
 
