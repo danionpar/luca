@@ -445,7 +445,7 @@ The Node extractor must produce text the existing regexes still match. This task
 
 - [ ] **Step 1: Add the local output directory to `.gitignore`**
 
-Append to `/Users/danielapaz/dev/projects/budget-poc/.gitignore`:
+Append to `<repo-root>/.gitignore`:
 
 ```
 # Local-only reference output from real statements — never committed
