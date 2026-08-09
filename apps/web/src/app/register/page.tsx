@@ -37,7 +37,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-center text-2xl">
-            💰 Budget POC
+            💰 Luca
           </CardTitle>
           <p className="text-center text-sm text-muted-foreground">
             Crea tu cuenta

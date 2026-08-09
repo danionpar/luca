@@ -1,4 +1,4 @@
-# Budget POC — MCP-First Architecture
+# Luca — MCP-First Architecture
 
 **Date:** 2026-07-08
 **Status:** Proposed
@@ -87,7 +87,7 @@ Failed files move to a `failed/` subfolder with the error recorded, so a bad PDF
 
 The import tool returns a summary per run: imported, skipped as duplicate, and failed with reasons.
 
-**Passwords.** Banco de Chile statements are encrypted. A default password is configured once (statements typically use a stable, identity-derived password), with a per-file override available for exceptions.
+**Passwords.** Verified against nine real statements: these PDFs are NOT encrypted, so no password is required. The parser still accepts a password parameter for statements that turn out to be protected; pass an empty string otherwise.
 
 **Location.** The statements folder lives outside the repository — the repository is public, and real statements must never enter it. `*.pdf` and `statements/` are git-ignored as a second line of defense.
 

@@ -1,4 +1,4 @@
-# Budget POC
+# Luca
 
 A personal finance tracker for Chilean bank statements — starting with Banco
 de Chile credit card statements. It runs entirely on your own machine: your

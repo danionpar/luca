@@ -8,7 +8,7 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Budget POC",
+  title: "Luca",
   description: "App de finanzas personales",
 };
 

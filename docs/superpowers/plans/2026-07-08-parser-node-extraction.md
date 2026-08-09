@@ -885,7 +885,7 @@ Expected: PASS. Under this PATH, `qpdf` is absent and `python3` is the system in
 Create `README.md` at the repository root. Statement import no longer has system prerequisites, and the README should say so plainly.
 
 ```markdown
-# Budget POC
+# Luca
 
 A personal finance tracker for Chilean bank statements. Runs entirely on your
 own machine: your financial data never leaves it.

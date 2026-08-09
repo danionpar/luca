@@ -1,5 +1,5 @@
 {
-  "name": "@budget-poc/api",
+  "name": "@luca/api",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -16,7 +16,7 @@
     "test:watch": "node --import tsx --test --watch \"src/**/*.test.ts\""
   },
   "dependencies": {
-    "@budget-poc/shared": "workspace:*",
+    "@luca/shared": "workspace:*",
     "@fastify/cors": "11.0.1",
     "@fastify/multipart": "9.0.3",
     "@neondatabase/serverless": "0.10.4",
