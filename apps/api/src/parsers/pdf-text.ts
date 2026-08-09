@@ -7,11 +7,8 @@ import { getDocument, type PdfTextItem } from "pdfjs-dist/legacy/build/pdf.mjs";
 /** Vertical distance in PDF units below which two items are treated as the same line. */
 const LINE_TOLERANCE = 2;
 
-/** Horizontal gap, in multiples of the estimated character width, that becomes a column break. */
-const COLUMN_GAP_RATIO = 1.5;
-
 /** Upper bound on inserted spaces, so a wide empty column cannot produce a huge run. */
-const MAX_GAP_SPACES = 12;
+const MAX_GAP_SPACES = 20;
 
 interface PositionedItem {
   text: string;
@@ -49,8 +46,23 @@ function estimateCharWidth(items: PositionedItem[]): number {
 }
 
 /**
- * Rebuilds a line of text from items ordered left to right, inserting spaces
- * proportional to the horizontal gap between them so column structure survives.
+ * Rebuilds a line of text from items ordered left to right. A standalone
+ * whitespace item's own `width` is the authoritative, exact measurement of
+ * that specific gap — pdf.js only ever emits one when the gap is a real
+ * column break; an ordinary single space between two words on the same
+ * baseline is instead baked directly into the surrounding text item's own
+ * `str` (confirmed by inspecting raw items: a reference code, a merchant,
+ * and a city sharing normal single-space gaps arrive as one item with the
+ * spaces already in its string, while only the wide gap before the next
+ * column arrives as its own item). A standalone whitespace item therefore
+ * always denotes a deliberate separator and must never collapse to a
+ * single space — the number of spaces is derived from its width, floored
+ * at 2, which is what keeps `SINGLE_RE`'s merchant/city boundary intact
+ * even when a long merchant name leaves little room before the city
+ * column starts.
+ *
+ * Items with no whitespace item between them (pdf.js sometimes emits none
+ * at all for a small gap) still fall back to a positional check.
  */
 function joinLine(items: PositionedItem[], charWidth: number): string {
   let line = "";
@@ -58,23 +70,15 @@ function joinLine(items: PositionedItem[], charWidth: number): string {
 
   for (const item of items) {
     if (isWhitespaceItem(item)) {
-      // A whitespace item's `str` is collapsed to one space regardless of the
-      // actual gap it spans, so its width — not its text — carries the signal.
-      const spaces = charWidth > 0 ? Math.round(item.width / charWidth) : 1;
-      line += " ".repeat(Math.min(Math.max(spaces, 1), MAX_GAP_SPACES));
+      const spaces = charWidth > 0 ? Math.round(item.width / charWidth) : 2;
+      line += " ".repeat(Math.min(Math.max(spaces, 2), MAX_GAP_SPACES));
       cursor = item.x + item.width;
       continue;
     }
 
     if (cursor !== null) {
       const gap = item.x - cursor;
-
-      if (charWidth > 0 && gap > charWidth * COLUMN_GAP_RATIO) {
-        const spaces = Math.min(Math.round(gap / charWidth), MAX_GAP_SPACES);
-        line += " ".repeat(Math.max(spaces, 2));
-      } else if (gap > 0 && !line.endsWith(" ")) {
-        line += " ";
-      }
+      if (gap > 0 && !line.endsWith(" ")) line += " ";
     }
 
     line += item.text;

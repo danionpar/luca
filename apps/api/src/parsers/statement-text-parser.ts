@@ -33,6 +33,17 @@ function parseAmount(raw: string): number {
   return parseInt(raw.replace(/\./g, "").replace(/\s/g, "").replace(/,/g, ""), 10);
 }
 
+/**
+ * Collapses any run of whitespace to a single space and trims the ends.
+ * Different text extractors reconstruct a PDF's column gaps with different
+ * internal spacing (an artifact of each extractor's own layout heuristic,
+ * not a meaningful distinction), so merchant/location identity must not
+ * depend on exactly how many spaces separate two words.
+ */
+function normalizeWhitespace(raw: string): string {
+  return raw.replace(/\s+/g, " ").trim();
+}
+
 // Matches: LUGAR DD/MM/AA CÓDIGO COMERCIO CIUDAD $ MONTO $ MONTO CUOTA $ CUOTA
 const SINGLE_RE = /^(.+?)\s+(\d{2}\/\d{2}\/\d{2})\s+(\d{9,18})\s+(.+?)\s{2,}(\S+.*?)\s+\$\s+([-\d.]+)\s+\$\s+([-\d.]+)\s+(\d{2}\/\d{2})\s+\$\s+([-\d.]+)/;
 
@@ -98,8 +109,8 @@ export function parseStatementText(text: string): ParsedStatement {
         transactions.push({
           date: parseDate(m[2]),
           referenceCode: m[3],
-          merchant: m[4].trim(),
-          location: m[1].trim(),
+          merchant: normalizeWhitespace(m[4]),
+          location: normalizeWhitespace(m[1]),
           amount: parseAmount(m[9]),
           installment: m[8],
           interestRate: parseFloat(m[5].replace(",", ".")),
@@ -116,8 +127,8 @@ export function parseStatementText(text: string): ParsedStatement {
       transactions.push({
         date: parseDate(sm[2]),
         referenceCode: sm[3],
-        merchant: sm[4].trim(),
-        location: sm[1].trim(),
+        merchant: normalizeWhitespace(sm[4]),
+        location: normalizeWhitespace(sm[1]),
         amount: amt,
         installment: sm[8],
         interestRate: null,
@@ -133,7 +144,7 @@ export function parseStatementText(text: string): ParsedStatement {
       transactions.push({
         date: parseDate(cm[1]),
         referenceCode: cm[2],
-        merchant: cm[3].trim(),
+        merchant: normalizeWhitespace(cm[3]),
         location: "",
         amount: amt,
         installment: cm[6],
