@@ -1,0 +1,28 @@
+node_modules
+dist
+.next
+.turbo
+.env
+.env.local
+*.tsbuildinfo
+
+# Local SQLite database — personal financial data, never committed
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# Bank statements — real PDFs must never reach a public repository.
+# Test fixtures must be synthetic or redacted (see docs/).
+*.pdf
+statements/
+
+# Local-only output derived from real statements — never committed
+.local/
+
+# Generated local indexes and caches (per-checkout, not portable)
+.codegraph/
+.atl/
+
+# macOS
+.DS_Store
