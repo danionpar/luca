@@ -1,5 +1,5 @@
 {
-  "name": "@budget-poc/web",
+  "name": "@luca/web",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
-    "@budget-poc/shared": "workspace:*",
+    "@luca/shared": "workspace:*",
     "better-auth": "1.6.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

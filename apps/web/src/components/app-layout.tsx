@@ -33,7 +33,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         }`}
       >
         <div className="p-4 border-b">
-          <h1 className="text-xl font-bold">💰 Budget POC</h1>
+          <h1 className="text-xl font-bold">💰 Luca</h1>
         </div>
         <nav className="p-2 space-y-1">
           {navItems.map((item) => (
@@ -60,7 +60,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
             ☰
           </Button>
-          <h1 className="font-semibold">💰 Budget POC</h1>
+          <h1 className="font-semibold">💰 Luca</h1>
         </header>
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>

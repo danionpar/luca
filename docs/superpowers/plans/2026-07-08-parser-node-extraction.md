@@ -445,7 +445,7 @@ The Node extractor must produce text the existing regexes still match. This task
 
 - [ ] **Step 1: Add the local output directory to `.gitignore`**
 
-Append to `/Users/danielapaz/dev/projects/budget-poc/.gitignore`:
+Append to `<repo-root>/.gitignore`:
 
 ```
 # Local-only reference output from real statements — never committed
@@ -616,8 +616,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 
-import { extractPdfText } from "./pdf-text.ts";
-import { parseStatementText } from "./statement-text-parser.ts";
+import { extractPdfText } from "./pdf-text.js";
+import { parseStatementText } from "./statement-text-parser.js";
 
 const REFERENCE_PATH = ".local/reference-text.txt";
 const pdfPath = process.env.REFERENCE_PDF_PATH;
@@ -834,9 +834,9 @@ is preserved."
 Replace the whole file:
 
 ```typescript
-import { extractPdfText } from "./pdf-text.ts";
-import { parseStatementText } from "./statement-text-parser.ts";
-import type { ParsedStatement, ParsedTransaction } from "./statement-text-parser.ts";
+import { extractPdfText } from "./pdf-text.js";
+import { parseStatementText } from "./statement-text-parser.js";
+import type { ParsedStatement, ParsedTransaction } from "./statement-text-parser.js";
 
 export type { ParsedStatement, ParsedTransaction };
 
@@ -885,7 +885,7 @@ Expected: PASS. Under this PATH, `qpdf` is absent and `python3` is the system in
 Create `README.md` at the repository root. Statement import no longer has system prerequisites, and the README should say so plainly.
 
 ```markdown
-# Budget POC
+# Luca
 
 A personal finance tracker for Chilean bank statements. Runs entirely on your
 own machine: your financial data never leaves it.

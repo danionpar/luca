@@ -1,4 +1,4 @@
-# Budget POC — Personal-First Reorientation
+# Luca — Personal-First Reorientation
 
 **Date:** 2026-07-07 (revised 2026-07-08)
 **Status:** SUPERSEDED by [2026-07-08-mcp-first-architecture-design.md](./2026-07-08-mcp-first-architecture-design.md)
@@ -8,7 +8,7 @@
 
 ## Context
 
-Budget POC was initially oriented toward a scalable multi-user product. The owner's actual goal is a personal finance tracker: upload bank statements, record expenses, and understand saving capacity. The machine of record is a single MacBook.
+Luca was initially oriented toward a scalable multi-user product. The owner's actual goal is a personal finance tracker: upload bank statements, record expenses, and understand saving capacity. The machine of record is a single MacBook.
 
 An exploration of the current state (~3,100 LOC) found the foundation is solid and functional: email+password auth (Better Auth), transaction CRUD with monthly summary, category CRUD, and a sophisticated Banco de Chile credit-card PDF parser (qpdf decryption, installment detection, forward projection of future installment payments, duplicate detection). The gap is not architecture — it is missing personal-use features.
 
