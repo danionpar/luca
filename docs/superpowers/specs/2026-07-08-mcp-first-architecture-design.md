@@ -34,11 +34,19 @@ The interface question also resolves in the owner's favor. The stated goal is "h
 
 **Layer 1 — Transactional store (the truth).** Local SQLite: transactions, categories, statements, categorization rules. Typed, exact, deterministic. Nothing interprets or opines here. This is the existing schema, migrated from Postgres.
 
-**Layer 2 — Insight store (modeled on engram).** A second set of tables in the same SQLite file, modeled on engram's design as verified by inspecting its schema:
+**Layer 2 — Insight store (modeled on engram).** A second set of tables in the same SQLite file, modeled on [engram](https://github.com/Gentleman-Programming/engram) by Alan Buscaglia (MIT). The design below was derived by reading engram's actual implementation (`internal/store/store.go`, `internal/store/relations.go`), not just its documentation. No engram code is reused — engram is Go, this is TypeScript — but the credit belongs in the artifact, not only in the README.
 
-- An `observations`-shaped table for learned patterns and advice, with `type`, `title`, `content`, `topic_key`, and lifecycle timestamps.
-- FTS5 full-text search over it, as an external-content virtual table. Notably, engram stores 870 observations with **zero embeddings** — its `embedding` column is unused and the system runs on FTS5 plus structured metadata. The clone starts the same way; vectors are a later optimization, not a prerequisite.
-- A `relations`-shaped table modeled on engram's `memory_relations`: `source_id`, `target_id`, `relation`, `reason`, `evidence`, `confidence`, and `superseded_at` / `superseded_by`. This is what links patterns across time. When a belief changes ("delivery spending was ~200k, now it's ~350k"), the old observation is superseded rather than deleted, preserving the history of what the system believed and when.
+- An `observations`-shaped table for learned patterns and advice: `type`, `title`, `content`, `topic_key`, `normalized_hash`, `revision_count`, `duplicate_count`, `pinned`, and lifecycle timestamps.
+- **`topic_key` makes a save an upsert.** Same `topic_key` updates the row in place and increments `revision_count`. This is the mechanism that lets "the trend on this recurring bill" evolve monthly without accumulating duplicate rows.
+- **Dedup via `normalized_hash`** over a rolling window: a repeat save bumps `duplicate_count` and `last_seen_at` instead of inserting. Prevents re-recording "recurring bill detected" every single month.
+- FTS5 full-text search as an **external-content** virtual table (`content='observations'`, `content_rowid='id'`), kept in sync by insert/delete/update triggers, ranked with weighted BM25 — engram weights title 5×, `topic_key` 3×, content 1×, and zeroes the rest.
+- **No embeddings.** Engram declares `embedding`, `embedding_model` and `embedding_created_at` and never writes to any of them; all retrieval is FTS5/BM25. Copying unused columns would be cargo-culting schema debt. Vectors are a later optimization if FTS5 proves insufficient, not a prerequisite.
+- A `relations` table modeled on engram's `memory_relations`: `source_id`, `target_id`, `relation`, `reason`, `evidence`, `confidence`, `judgment_status`. This links patterns across time — "groceries jumped in March" related to "prices rose in January."
+- **The relation vocabulary is a locked set**, not free text: `related`, `compatible`, `scoped`, `conflicts_with`, `supersedes`, `not_conflict`. `pending` is a state, not a verb the model chooses.
+- **Candidate detection is cheap first.** Engram runs an FTS5 match on the new observation's *title only*, applies a BM25 relevance floor, and returns a bounded candidate list as `pending` relations — escalating to a model only for genuinely ambiguous pairs. Adopt this ordering; it keeps the common path free.
+- **Supersession caveat.** Engram declares `superseded_at` / `superseded_by_relation_id` but nothing writes them — the supersede chain is unimplemented there. Only add those columns here alongside logic that actually follows the chain; otherwise they are schema debt.
+
+**Deliberately not copied from engram**, because they exist for problems this project does not have: the entire cloud/sync/multi-machine layer, the `project` dimension and multi-project detection (this tool has exactly one domain forever), the agent-agnostic tool-profile split, and the Go-specific packaging.
 
 **Layer 3 — MCP server (the interface).** Exposes both layers as tools that Claude Code calls.
 
