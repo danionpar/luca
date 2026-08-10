@@ -128,3 +128,13 @@ Engram is the reason this project has a second layer at all. Using it daily made
 - **Progressive disclosure in the tool surface** — compact results first, full content only when asked — so the agent's context stays cheap.
 
 No engram code is used here; `luca` is TypeScript and engram is Go. What is borrowed is the design thinking, and it deserves the credit. If you want persistent memory for your own coding agent, go use the real thing: [Gentleman-Programming/engram](https://github.com/Gentleman-Programming/engram).
+
+## Contributing
+
+Issues and pull requests are welcome. The tool currently understands one bank's statement format; if you have a Chilean statement it fails on, an issue describing the layout — **with every real value redacted** — is genuinely useful.
+
+Two rules, both about privacy: never attach a real statement, and never commit one. Fixtures are synthetic, and the test suite is built so a fresh clone passes without any statement at all.
+
+## License
+
+[MIT](LICENSE) — free to use, modify and redistribute, including commercially. Keep the copyright notice, and understand that it comes with no warranty: this is a tool for reasoning about your own money, not financial advice, and you are responsible for checking the numbers it gives you.
