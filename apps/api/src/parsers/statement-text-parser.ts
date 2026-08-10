@@ -6,7 +6,31 @@ export interface ParsedTransaction {
   amount: number;
   installment: string | null;
   interestRate: number | null;
-  section: "single" | "installment" | "charge" | "payment";
+  section: "single" | "installment" | "charge" | "payment" | "pat";
+}
+
+/**
+ * A per-section arithmetic check: the sum of the transactions the parser
+ * assigned to a section, against the total the statement itself prints for
+ * that section. This is the parser's verification oracle — a statement
+ * validates against its own printed arithmetic rather than against any
+ * external reference implementation.
+ *
+ * `printedTotal` is `null` when the statement does not print that marker at
+ * all (e.g. no PAT region). A `null` printedTotal always makes `balances`
+ * false — absence of a total is never treated as a total of zero.
+ */
+export interface SectionReconciliation {
+  section: "payment" | "pat" | "single" | "installment";
+  parsedSum: number;
+  printedTotal: number | null;
+  delta: number | null;
+  balances: boolean;
+}
+
+export interface ReconciliationResult {
+  balanced: boolean;
+  checks: SectionReconciliation[];
 }
 
 export interface ParsedStatement {
@@ -16,6 +40,7 @@ export interface ParsedStatement {
   periodTo: string;
   totalBilled: number;
   transactions: ParsedTransaction[];
+  reconciliation: ReconciliationResult;
 }
 
 function parseDate(dateStr: string): string {
@@ -63,6 +88,44 @@ const INSTALLMENT_RE = /^(.+?)\s+(\d{2}\/\d{2}\/\d{2})\s+(\d{9,18})\s+(.+?)\s+TA
 const CHARGE_RE = /^\s*(\d{2}\/\d{2}\/\d{2})\s+(\d{9,18})\s+(.+?)\s+\$\s+([-\d.]+)\s+\$\s+([-\d.]+)\s+(\d{2}\/\d{2})\s+\$\s+([-\d.]+)/;
 
 /**
+ * Region the current line falls in, tracked as we walk the statement
+ * top-to-bottom. Each `TOTAL ...` marker line is the END of the region it
+ * names and therefore advances `currentRegion` to the region that FOLLOWS
+ * it — not the one it summarizes. The real layout is:
+ *
+ *   payments      -- up to "TOTAL PAGOS"
+ *   pat           -- between "TOTAL PAGOS" and "TOTAL PAT A LA CUENTA"
+ *   single        -- between "TOTAL PAT A LA CUENTA" and "TOTAL TRANSACCIONES EN UNA CUOTA"
+ *   installments  -- between "TOTAL TRANSACCIONES EN UNA CUOTA" and "TOTAL TRANSACCIONES EN CUOTAS"
+ *   charges       -- after "CARGOS, COMISIONES, IMPUESTOS"
+ *
+ * `between_cuotas_and_charges` and `pre` carry no rows of their own; they
+ * only exist so unmatched lines between two markers are inert.
+ */
+type Region =
+  | "pre"
+  | "payments"
+  | "pat"
+  | "single"
+  | "installments"
+  | "between_cuotas_and_charges"
+  | "charges"
+  | "future";
+
+/** Maps the current region to the section a positive-amount row gets. */
+function sectionForRegion(region: Region): ParsedTransaction["section"] {
+  if (region === "pat") return "pat";
+  if (region === "charges") return "charge";
+  return "single";
+}
+
+/** Extracts the peso amount from a `... $ 1.234` style total line. */
+function printedAmount(line: string): number | null {
+  const m = line.match(/\$\s*([-\d.]+)/);
+  return m ? parseAmount(m[1]) : null;
+}
+
+/**
  * Parses the plain text of a Banco de Chile credit card statement.
  *
  * Layout-sensitive: SINGLE_RE relies on two or more spaces separating the
@@ -78,7 +141,21 @@ export function parseStatementText(text: string): ParsedStatement {
   let periodFrom = "";
   let periodTo = "";
   let totalBilled = 0;
-  let currentSection = "pre";
+  let currentRegion: Region = "pre";
+
+  // Printed totals, parsed from the same marker lines used for region
+  // tracking. `null` means the statement never printed that marker.
+  let printedPayments: number | null = null;
+  let printedPat: number | null = null;
+  let printedSingle: number | null = null;
+  let printedInstallment: number | null = null;
+
+  // Indices of transactions tentatively tagged "pat" while currentRegion is
+  // "pat". If some other marker arrives before "TOTAL PAT A LA CUENTA"
+  // confirms them (i.e. the statement has no PAT rows and skips straight
+  // from "TOTAL PAGOS" to the single-purchase listing without printing that
+  // marker), they get demoted to "single" instead of staying mistagged.
+  let pendingPatIndices: number[] = [];
 
   for (const line of lines) {
     // Header
@@ -99,17 +176,43 @@ export function parseStatementText(text: string): ParsedStatement {
       if (m) totalBilled = parseAmount(m[1]);
     }
 
-    // Section tracking
-    if (line.includes("Pago Pesos TEF") || line.includes("TOTAL PAGOS")) currentSection = "single";
-    if (line.includes("TOTAL PAT A LA CUENTA") || line.includes("TOTAL TRANSACCIONES EN UNA CUOTA")) currentSection = "installments_section";
-    if (line.includes("TOTAL TRANSACCIONES EN CUOTAS")) currentSection = "charges_section";
-    if (line.includes("CARGOS, COMISIONES, IMPUESTOS")) currentSection = "charges";
-    if (line.includes("INFORMACIÓN COMPRAS EN CUOTAS EN PERÍODO")) currentSection = "future";
+    // Printed section totals (captured before the marker also flips the region below).
+    if (line.includes("TOTAL PAGOS") && printedPayments === null) printedPayments = printedAmount(line);
+    if (line.includes("TOTAL PAT A LA CUENTA") && printedPat === null) printedPat = printedAmount(line);
+    if (line.includes("TOTAL TRANSACCIONES EN UNA CUOTA") && printedSingle === null) printedSingle = printedAmount(line);
+    if (line.includes("TOTAL TRANSACCIONES EN CUOTAS") && printedInstallment === null) printedInstallment = printedAmount(line);
+
+    // Region tracking: each marker is the END of the region it names, so it
+    // advances currentRegion to the region that follows it.
+    const isRegionMarker =
+      line.includes("Pago Pesos TEF") ||
+      line.includes("TOTAL PAGOS") ||
+      line.includes("TOTAL PAT A LA CUENTA") ||
+      line.includes("TOTAL TRANSACCIONES EN UNA CUOTA") ||
+      line.includes("TOTAL TRANSACCIONES EN CUOTAS") ||
+      line.includes("CARGOS, COMISIONES, IMPUESTOS") ||
+      line.includes("INFORMACIÓN COMPRAS EN CUOTAS EN PERÍODO") ||
+      line.includes("ESTADO DE CUENTA INTERNACIONAL");
+
+    // Any other marker arriving while still "pat" means "TOTAL PAT A LA
+    // CUENTA" never printed — demote the rows tentatively tagged "pat".
+    if (currentRegion === "pat" && isRegionMarker && !line.includes("TOTAL PAT A LA CUENTA")) {
+      for (const idx of pendingPatIndices) transactions[idx].section = "single";
+      pendingPatIndices = [];
+    }
+
+    if (line.includes("Pago Pesos TEF")) currentRegion = "payments";
+    if (line.includes("TOTAL PAGOS")) currentRegion = "pat";
+    if (line.includes("TOTAL PAT A LA CUENTA")) { currentRegion = "single"; pendingPatIndices = []; }
+    if (line.includes("TOTAL TRANSACCIONES EN UNA CUOTA")) currentRegion = "installments";
+    if (line.includes("TOTAL TRANSACCIONES EN CUOTAS")) currentRegion = "between_cuotas_and_charges";
+    if (line.includes("CARGOS, COMISIONES, IMPUESTOS")) currentRegion = "charges";
+    if (line.includes("INFORMACIÓN COMPRAS EN CUOTAS EN PERÍODO")) currentRegion = "future";
     if (line.includes("ESTADO DE CUENTA INTERNACIONAL")) break;
 
     // Skip non-data lines
     if (line.includes("TOTAL ") || line.includes("LUGAR DE") || line.includes("Sin Movimientos")) continue;
-    if (currentSection === "pre" || currentSection === "future") continue;
+    if (currentRegion === "pre" || currentRegion === "future") continue;
 
     // Try installment first
     if (line.includes("TASA INT")) {
@@ -141,8 +244,9 @@ export function parseStatementText(text: string): ParsedStatement {
         amount: amt,
         installment: sm[8],
         interestRate: null,
-        section: amt < 0 ? "payment" : (currentSection === "charges" ? "charge" : "single"),
+        section: amt < 0 ? "payment" : sectionForRegion(currentRegion),
       });
+      if (currentRegion === "pat" && amt >= 0) pendingPatIndices.push(transactions.length - 1);
       continue;
     }
 
@@ -159,8 +263,9 @@ export function parseStatementText(text: string): ParsedStatement {
         amount: amt,
         installment: smm[7],
         interestRate: null,
-        section: amt < 0 ? "payment" : (currentSection === "charges" ? "charge" : "single"),
+        section: amt < 0 ? "payment" : sectionForRegion(currentRegion),
       });
+      if (currentRegion === "pat" && amt >= 0) pendingPatIndices.push(transactions.length - 1);
       continue;
     }
 
@@ -181,5 +286,29 @@ export function parseStatementText(text: string): ParsedStatement {
     }
   }
 
-  return { cardLastFour, statementDate, periodFrom, periodTo, totalBilled, transactions };
+  const sumBySection = (section: ParsedTransaction["section"]) =>
+    transactions.filter((t) => t.section === section).reduce((sum, t) => sum + t.amount, 0);
+
+  const buildCheck = (
+    section: SectionReconciliation["section"],
+    parsedSum: number,
+    printedTotal: number | null,
+  ): SectionReconciliation => {
+    const delta = printedTotal === null ? null : parsedSum - printedTotal;
+    return { section, parsedSum, printedTotal, delta, balances: printedTotal !== null && delta === 0 };
+  };
+
+  const checks: SectionReconciliation[] = [
+    buildCheck("payment", sumBySection("payment"), printedPayments),
+    buildCheck("pat", sumBySection("pat"), printedPat),
+    buildCheck("single", sumBySection("single"), printedSingle),
+    buildCheck("installment", sumBySection("installment"), printedInstallment),
+  ];
+
+  const reconciliation: ReconciliationResult = {
+    balanced: checks.every((c) => c.printedTotal === null || c.balances),
+    checks,
+  };
+
+  return { cardLastFour, statementDate, periodFrom, periodTo, totalBilled, transactions, reconciliation };
 }

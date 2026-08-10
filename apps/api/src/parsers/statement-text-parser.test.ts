@@ -34,6 +34,23 @@ test("parses single-payment purchases", () => {
   assert.equal(single.interestRate, null);
 });
 
+test("parses PAT (Pago Automático de Cuentas) rows into their own section, not 'single'", () => {
+  const result = parseStatementText(fixture);
+  const patRows = result.transactions.filter((t) => t.section === "pat");
+
+  assert.equal(patRows.length, 2, "expected both PAT rows to be parsed");
+  assert.ok(
+    patRows.every((t) => ["222333444555", "222333444556"].includes(t.referenceCode)),
+    "expected the PAT rows to be the ones between TOTAL PAGOS and TOTAL PAT A LA CUENTA",
+  );
+
+  const singleRefCodes = result.transactions.filter((t) => t.section === "single").map((t) => t.referenceCode);
+  assert.ok(
+    !singleRefCodes.includes("222333444555") && !singleRefCodes.includes("222333444556"),
+    "PAT rows must not be counted as single purchases",
+  );
+});
+
 test("parses installment purchases with their interest rate", () => {
   const result = parseStatementText(fixture);
   const installment = result.transactions.find((t) => t.referenceCode === "987654321098");
@@ -109,4 +126,86 @@ test("expands two-digit years into the 2000s", () => {
   for (const date of dates) {
     assert.match(date, /^20\d{2}-\d{2}-\d{2}$/, `expected an ISO date in the 2000s, got ${date}`);
   }
+});
+
+test("reconciliation balances for a statement whose printed totals match its rows", () => {
+  const result = parseStatementText(fixture);
+
+  assert.equal(
+    result.reconciliation.balanced,
+    true,
+    `expected the fixture to reconcile, got checks: ${JSON.stringify(result.reconciliation.checks)}`,
+  );
+  for (const check of result.reconciliation.checks) {
+    assert.equal(check.balances, true, `expected the ${check.section} check to balance`);
+    assert.equal(check.delta, 0);
+  }
+});
+
+test("the single-section sum matches the fixture's printed TOTAL TRANSACCIONES EN UNA CUOTA", () => {
+  const result = parseStatementText(fixture);
+  const singleCheck = result.reconciliation.checks.find((c) => c.section === "single");
+
+  assert.ok(singleCheck, "expected a 'single' reconciliation check");
+  assert.equal(singleCheck.printedTotal, 66490);
+  assert.equal(singleCheck.parsedSum, 66490);
+});
+
+test("the pat-section sum matches the fixture's printed TOTAL PAT A LA CUENTA", () => {
+  const result = parseStatementText(fixture);
+  const patCheck = result.reconciliation.checks.find((c) => c.section === "pat");
+
+  assert.ok(patCheck, "expected a 'pat' reconciliation check");
+  assert.equal(patCheck.printedTotal, 37000);
+  assert.equal(patCheck.parsedSum, 37000);
+});
+
+test("a statement with no PAT region still parses and reconciles", () => {
+  const noPatStatement = [
+    "Pago Pesos TEF",
+    "TOTAL PAGOS $ -5.000",
+    "05/03/25 900000000001 PAGO EJEMPLO $ -5.000 $ -5.000 01/01 $ -5.000",
+    "SANTIAGO 15/03/25 900000000002 TIENDA EJEMPLO SEIS  SANTIAGO $ 9.000 $ 9.000 01/01 $ 9.000",
+    "TOTAL TRANSACCIONES EN UNA CUOTA $ 9.000",
+  ].join("\n");
+
+  const result = parseStatementText(noPatStatement);
+  const single = result.transactions.find((t) => t.referenceCode === "900000000002");
+
+  assert.ok(single, "expected the single purchase to be parsed even without a PAT marker");
+  assert.equal(
+    single.section,
+    "single",
+    "a row must not stay mistagged 'pat' when TOTAL PAT A LA CUENTA never printed",
+  );
+
+  const singleCheck = result.reconciliation.checks.find((c) => c.section === "single");
+  assert.ok(singleCheck);
+  assert.equal(singleCheck.balances, true);
+  assert.equal(
+    result.reconciliation.balanced,
+    true,
+    "a missing PAT marker must not prevent the rest of the statement from reconciling",
+  );
+});
+
+test("a missing printed total is reported as absent, never as balanced", () => {
+  const noPatStatement = [
+    "Pago Pesos TEF",
+    "TOTAL PAGOS $ -5.000",
+    "SANTIAGO 15/03/25 900000000003 TIENDA EJEMPLO SIETE  SANTIAGO $ 9.000 $ 9.000 01/01 $ 9.000",
+    "TOTAL TRANSACCIONES EN UNA CUOTA $ 9.000",
+  ].join("\n");
+
+  const result = parseStatementText(noPatStatement);
+  const patCheck = result.reconciliation.checks.find((c) => c.section === "pat");
+
+  assert.ok(patCheck, "expected a 'pat' check even though the statement never prints that total");
+  assert.equal(patCheck.printedTotal, null);
+  assert.equal(patCheck.delta, null);
+  assert.equal(
+    patCheck.balances,
+    false,
+    "an absent printed total must never be reported as balancing",
+  );
 });

@@ -22,12 +22,13 @@ async function test() {
   console.log(`Total billed: $${result.totalBilled.toLocaleString("es-CL")}`);
   console.log(`Transactions found: ${result.transactions.length}\n`);
 
-  const sections = { single: 0, installment: 0, charge: 0, payment: 0 };
+  const sections = { single: 0, installment: 0, charge: 0, payment: 0, pat: 0 };
   for (const tx of result.transactions) {
     sections[tx.section]++;
   }
   console.log("=== BY SECTION ===");
   console.log(`Single purchases: ${sections.single}`);
+  console.log(`PAT (automatic payments): ${sections.pat}`);
   console.log(`Installments: ${sections.installment}`);
   console.log(`Charges/fees: ${sections.charge}`);
   console.log(`Payments/refunds: ${sections.payment}\n`);
@@ -35,6 +36,14 @@ async function test() {
   console.log("=== SINGLE PURCHASES (first 10) ===");
   result.transactions
     .filter((t) => t.section === "single")
+    .slice(0, 10)
+    .forEach((t) => {
+      console.log(`  ${t.date} | $${t.amount.toLocaleString("es-CL").padStart(10)} | ${t.merchant}`);
+    });
+
+  console.log("\n=== PAT / AUTOMATIC PAYMENTS (first 10) ===");
+  result.transactions
+    .filter((t) => t.section === "pat")
     .slice(0, 10)
     .forEach((t) => {
       console.log(`  ${t.date} | $${t.amount.toLocaleString("es-CL").padStart(10)} | ${t.merchant}`);
@@ -66,6 +75,9 @@ async function test() {
   const singleTotal = result.transactions
     .filter((t) => t.section === "single")
     .reduce((sum, t) => sum + t.amount, 0);
+  const patTotal = result.transactions
+    .filter((t) => t.section === "pat")
+    .reduce((sum, t) => sum + t.amount, 0);
   const installmentTotal = result.transactions
     .filter((t) => t.section === "installment")
     .reduce((sum, t) => sum + t.amount, 0);
@@ -75,9 +87,20 @@ async function test() {
 
   console.log("\n=== TOTALS ===");
   console.log(`Single purchases: $${singleTotal.toLocaleString("es-CL")}`);
+  console.log(`PAT (automatic payments): $${patTotal.toLocaleString("es-CL")}`);
   console.log(`Installments: $${installmentTotal.toLocaleString("es-CL")}`);
   console.log(`Charges/refunds: $${chargeTotal.toLocaleString("es-CL")}`);
-  console.log(`Sum: $${(singleTotal + installmentTotal + chargeTotal).toLocaleString("es-CL")}`);
+  console.log(`Sum: $${(singleTotal + patTotal + installmentTotal + chargeTotal).toLocaleString("es-CL")}`);
+
+  console.log("\n=== RECONCILIATION (statement validating itself) ===");
+  for (const check of result.reconciliation.checks) {
+    const printed = check.printedTotal === null ? "n/a" : `$${check.printedTotal.toLocaleString("es-CL")}`;
+    const delta = check.delta === null ? "n/a" : `$${check.delta.toLocaleString("es-CL")}`;
+    console.log(
+      `  ${check.section.padEnd(12)} parsed=$${check.parsedSum.toLocaleString("es-CL").padStart(12)}  printed=${printed.padStart(12)}  delta=${delta.padStart(12)}  ${check.balances ? "OK" : "MISMATCH"}`,
+    );
+  }
+  console.log(`\nOverall balanced: ${result.reconciliation.balanced}`);
 }
 
 test().catch(console.error);
