@@ -115,8 +115,8 @@ The tool logic is also exposed as a thin CLI, so the data and its core operation
 - The category taxonomy and its seed data.
 - The monthly summary logic.
 
-**Parked** (kept in the repository, not deleted, in case a UI is wanted later):
-- `apps/web` — the entire Next.js frontend.
+**Removed, and recoverable** (revised 2026-08-10):
+- `apps/web` — the entire Next.js frontend. An earlier draft of this spec said "parked, not deleted", on the assumption that keeping the directory was the only way not to lose it. That was wrong: git already keeps everything. The web-era state is bookmarked by the annotated tag **`v0.1-web-ui`**, and the frontend can be restored at any time with `git checkout v0.1-web-ui -- apps/web`. Carrying dead code in the working tree to avoid losing it is what tags are for.
 
 **Removed:**
 - Better Auth and the four auth tables; a single local process has no one to authenticate.
