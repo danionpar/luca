@@ -31,7 +31,7 @@ The problem it solves is the boring one. Your bank emails you a PDF every month.
 | Local SQLite store | In progress — migrating off a hosted Postgres |
 | MCP server | Designed, not built |
 | Insight layer (spending patterns) | Designed, not built |
-| Web UI | Parked. It exists in `apps/web` and is being replaced by conversation |
+| Web UI | Removed. The project is now MCP-first; conversation replaces the dashboard |
 
 The target architecture is written up in [`docs/superpowers/specs/2026-07-08-mcp-first-architecture-design.md`](docs/superpowers/specs/2026-07-08-mcp-first-architecture-design.md). Expect the HTTP API and web app in this repository to be replaced as that direction lands.
 
