@@ -1,13 +1,11 @@
 import "dotenv/config";
 import { z } from "zod";
 
+// A single local process reading a local SQLite file needs nothing but the
+// file's path. Everything else here (PORT, HOST, CORS_ORIGIN, the Better
+// Auth secrets) belonged to the Fastify/web era and has no reader left.
 const envSchema = z.object({
-  PORT: z.coerce.number().default(4000),
-  HOST: z.string().default("0.0.0.0"),
-  DATABASE_URL: z.string().min(1),
-  CORS_ORIGIN: z.string().default("http://localhost:3000"),
-  BETTER_AUTH_SECRET: z.string().min(1),
-  BETTER_AUTH_URL: z.string().default("http://localhost:4000"),
+  DATABASE_URL: z.string().min(1).default("./data/luca.db"),
 });
 
 export const env = envSchema.parse(process.env);

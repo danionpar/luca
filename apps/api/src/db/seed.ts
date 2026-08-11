@@ -1,10 +1,5 @@
-import "dotenv/config";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { db } from "./index.js";
 import { categories } from "./schema.js";
-
-const sql = neon(process.env.DATABASE_URL!);
-const db = drizzle(sql);
 
 const systemCategories = [
   { emoji: "🏠", name: "Vivienda", type: "expense" as const, sortOrder: 1 },
