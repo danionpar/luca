@@ -13,14 +13,16 @@
     "db:seed": "tsx src/db/seed.ts",
     "db:backup": "tsx src/db/backup.ts",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
-    "test:watch": "node --import tsx --test --watch \"src/**/*.test.ts\""
+    "test:watch": "node --import tsx --test --watch \"src/**/*.test.ts\"",
+    "mcp": "tsx src/mcp/server.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
     "better-sqlite3": "13.0.3",
     "dotenv": "16.4.7",
     "drizzle-orm": "0.45.0",
     "pdfjs-dist": "4.9.155",
-    "zod": "3.24.2"
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@types/better-sqlite3": "9.6.0",
