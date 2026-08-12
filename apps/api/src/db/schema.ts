@@ -4,7 +4,7 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 // SQLite has no native enum type; the allowed values are enforced at the
 // column level via `text({ enum: [...] })` instead of a separate pgEnum.
 export const transactionTypes = ["income", "expense", "saving"] as const;
-export const transactionSources = ["email", "manual"] as const;
+export const transactionSources = ["email", "manual", "statement"] as const;
 export const categoryTypes = ["income", "expense", "saving"] as const;
 
 // App tables
@@ -44,6 +44,11 @@ export const transactions = sqliteTable("transactions", {
   bank: text("bank"),
   paymentMethod: text("payment_method"),
   rawEmailUid: text("raw_email_uid"),
+  // Bank-issued authorization/reference code for a statement-imported row.
+  // This is the idempotency key that lets a re-import of the same PDF (or
+  // an overlapping one) skip a transaction it already wrote, independent of
+  // the statement-level duplicate check.
+  referenceCode: text("reference_code"),
   billingMonth: text("billing_month"), // YYYY-MM, the statement cycle this belongs to
   isProjected: integer("is_projected", { mode: "boolean" })
     .notNull()
