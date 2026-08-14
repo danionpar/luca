@@ -112,8 +112,15 @@ type Region =
   | "charges"
   | "future";
 
-/** Maps the current region to the section a positive-amount row gets. */
+/**
+ * Maps the current region to the section every row in it gets. Section is a
+ * function of region alone — the amount's sign carries no section
+ * information: a refund is a charge line with a negative amount, and a
+ * credit adjustment inside the singles region is still a single. Only the
+ * payments region ever yields "payment".
+ */
 function sectionForRegion(region: Region): ParsedTransaction["section"] {
+  if (region === "payments") return "payment";
   if (region === "pat") return "pat";
   if (region === "charges") return "charge";
   return "single";
@@ -185,6 +192,7 @@ export function parseStatementText(text: string): ParsedStatement {
     // Region tracking: each marker is the END of the region it names, so it
     // advances currentRegion to the region that follows it.
     const isRegionMarker =
+      line.includes("1.TOTAL OPERACIONES") ||
       line.includes("Pago Pesos TEF") ||
       line.includes("TOTAL PAGOS") ||
       line.includes("TOTAL PAT A LA CUENTA") ||
@@ -201,7 +209,18 @@ export function parseStatementText(text: string): ParsedStatement {
       pendingPatIndices = [];
     }
 
-    if (line.includes("Pago Pesos TEF")) currentRegion = "payments";
+    // "1.TOTAL OPERACIONES" is the statement's own section header, printed
+    // once, immediately before the transaction listing begins — a
+    // structural marker present in every statement regardless of which
+    // payment method the first payment row happens to describe.
+    // "Pago Pesos TEF" is kept as a second, narrower trigger: it is not a
+    // section header at all but the description text Banco de Chile prints
+    // on an electronic-transfer payment row, which historically doubled as
+    // the de facto region marker. Some statements instead describe their
+    // payment rows as e.g. "MONTO CANCELADO", so relying on that text alone
+    // left the payments/PAT region never entered and those rows silently
+    // dropped (see the "MONTO CANCELADO" regression).
+    if (line.includes("1.TOTAL OPERACIONES") || line.includes("Pago Pesos TEF")) currentRegion = "payments";
     if (line.includes("TOTAL PAGOS")) currentRegion = "pat";
     if (line.includes("TOTAL PAT A LA CUENTA")) { currentRegion = "single"; pendingPatIndices = []; }
     if (line.includes("TOTAL TRANSACCIONES EN UNA CUOTA")) currentRegion = "installments";
@@ -244,9 +263,9 @@ export function parseStatementText(text: string): ParsedStatement {
         amount: amt,
         installment: sm[8],
         interestRate: null,
-        section: amt < 0 ? "payment" : sectionForRegion(currentRegion),
+        section: sectionForRegion(currentRegion),
       });
-      if (currentRegion === "pat" && amt >= 0) pendingPatIndices.push(transactions.length - 1);
+      if (currentRegion === "pat") pendingPatIndices.push(transactions.length - 1);
       continue;
     }
 
@@ -263,25 +282,24 @@ export function parseStatementText(text: string): ParsedStatement {
         amount: amt,
         installment: smm[7],
         interestRate: null,
-        section: amt < 0 ? "payment" : sectionForRegion(currentRegion),
+        section: sectionForRegion(currentRegion),
       });
-      if (currentRegion === "pat" && amt >= 0) pendingPatIndices.push(transactions.length - 1);
+      if (currentRegion === "pat") pendingPatIndices.push(transactions.length - 1);
       continue;
     }
 
     // Try charge/payment line
     const cm = line.match(CHARGE_RE);
     if (cm) {
-      const amt = parseAmount(cm[7]);
       transactions.push({
         date: parseDate(cm[1]),
         referenceCode: cm[2],
         merchant: normalizeWhitespace(cm[3]),
         location: "",
-        amount: amt,
+        amount: parseAmount(cm[7]),
         installment: cm[6],
         interestRate: null,
-        section: amt < 0 ? "payment" : "charge",
+        section: sectionForRegion(currentRegion),
       });
     }
   }

@@ -62,7 +62,16 @@ test("parses installment purchases with their interest rate", () => {
   assert.equal(installment.amount, 20000);
 });
 
-test("parses charges and classifies negative amounts as payments", () => {
+test("parses a payment row into the payment section", () => {
+  const result = parseStatementText(fixture);
+
+  const payment = result.transactions.find((t) => t.referenceCode === "700000000001");
+  assert.ok(payment, "expected the payment row to be parsed");
+  assert.equal(payment.section, "payment");
+  assert.equal(payment.amount, -30000);
+});
+
+test("classifies charges region rows by region, not by the sign of their amount", () => {
   const result = parseStatementText(fixture);
 
   const charge = result.transactions.find((t) => t.referenceCode === "111222333444");
@@ -70,9 +79,13 @@ test("parses charges and classifies negative amounts as payments", () => {
   assert.equal(charge.section, "charge");
   assert.equal(charge.amount, 5900);
 
+  // A negative row inside the charges region (a refund/credit adjustment) is
+  // still a "charge" — only the payments region ever yields "payment".
+  // Reclassifying it by sign alone was the original defect: it double-counted
+  // refunds as card payments regardless of which region they actually came from.
   const credit = result.transactions.find((t) => t.referenceCode === "555666777888");
   assert.ok(credit, "expected the credit line to be parsed");
-  assert.equal(credit.section, "payment");
+  assert.equal(credit.section, "charge");
   assert.equal(credit.amount, -30000);
 });
 
@@ -163,8 +176,8 @@ test("the pat-section sum matches the fixture's printed TOTAL PAT A LA CUENTA", 
 test("a statement with no PAT region still parses and reconciles", () => {
   const noPatStatement = [
     "Pago Pesos TEF",
-    "TOTAL PAGOS $ -5.000",
     "05/03/25 900000000001 PAGO EJEMPLO $ -5.000 $ -5.000 01/01 $ -5.000",
+    "TOTAL PAGOS $ -5.000",
     "SANTIAGO 15/03/25 900000000002 TIENDA EJEMPLO SEIS  SANTIAGO $ 9.000 $ 9.000 01/01 $ 9.000",
     "TOTAL TRANSACCIONES EN UNA CUOTA $ 9.000",
   ].join("\n");
@@ -187,6 +200,50 @@ test("a statement with no PAT region still parses and reconciles", () => {
     true,
     "a missing PAT marker must not prevent the rest of the statement from reconciling",
   );
+});
+
+test("a negative amount in the singles region stays 'single', not 'payment'", () => {
+  const statement = [
+    "1.TOTAL OPERACIONES",
+    "Pago Pesos TEF",
+    "TOTAL PAGOS $ 0",
+    "TOTAL PAT A LA CUENTA $ 0",
+    "SANTIAGO 15/03/25 900000000030 TIENDA EJEMPLO OCHO  SANTIAGO $ -4.000 $ -4.000 01/01 $ -4.000",
+    "TOTAL TRANSACCIONES EN UNA CUOTA $ -4.000",
+  ].join("\n");
+
+  const result = parseStatementText(statement);
+  const row = result.transactions.find((t) => t.referenceCode === "900000000030");
+
+  assert.ok(row, "expected the negative-amount single row to be parsed");
+  assert.equal(row.section, "single", "a negative amount must not reclassify a single-purchase row as a payment");
+  assert.equal(row.amount, -4000);
+});
+
+test("'1.TOTAL OPERACIONES' alone starts the payments region, even when no row describes itself as 'Pago Pesos TEF'", () => {
+  // Regression test: some statements label their payment rows with a
+  // different description (e.g. a generic "paid amount" caption) instead of
+  // the electronic-transfer text. The payments/PAT region must still be
+  // entered from the statement's own section header, or those rows — and any
+  // PAT rows behind them — are silently dropped instead of parsed.
+  const statement = [
+    "1.TOTAL OPERACIONES",
+    "05/03/25 900000000040 MONTO CANCELADO $ -5.000 $ -5.000 01/01 $ -5.000",
+    "TOTAL PAGOS $ -5.000",
+    "TOTAL PAT A LA CUENTA $ 0",
+    "TOTAL TRANSACCIONES EN UNA CUOTA $ 0",
+  ].join("\n");
+
+  const result = parseStatementText(statement);
+  const payment = result.transactions.find((t) => t.referenceCode === "900000000040");
+
+  assert.ok(payment, "expected the payment row to be parsed even without a 'Pago Pesos TEF' description");
+  assert.equal(payment.section, "payment");
+  assert.equal(payment.amount, -5000);
+
+  const paymentCheck = result.reconciliation.checks.find((c) => c.section === "payment");
+  assert.ok(paymentCheck);
+  assert.equal(paymentCheck.balances, true);
 });
 
 test("a missing printed total is reported as absent, never as balanced", () => {
