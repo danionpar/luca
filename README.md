@@ -46,6 +46,22 @@ cd apps/api && pnpm test
 
 Tests that need a real bank statement skip automatically when none is configured, so a fresh clone passes with no setup.
 
+### Connect it to Claude Code
+
+The server talks MCP over stdio — no port, no auth, nothing to run in the background. Register it with:
+
+```bash
+claude mcp add luca -- npx tsx /absolute/path/to/budget-poc/apps/api/src/mcp/server.ts
+```
+
+(Swap in your own clone's absolute path — `claude mcp add` doesn't take a working directory, so the path to `server.ts` has to be absolute.)
+
+Once it's connected, just ask, in a new Claude Code session:
+
+> "What did I spend on in March, and how much of it is still uncategorized?"
+
+`claude mcp list` confirms it's connected; `claude mcp get luca` shows the exact command it's running.
+
 ## How it works
 
 The design is three layers, deliberately separated:
