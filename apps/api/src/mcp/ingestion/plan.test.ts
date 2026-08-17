@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { planImport, sortStatementsChronologically } from "./plan.js";
 import { makeBalancedStatement, makeTransaction, makeUnbalancedStatement } from "./__fixtures__/synthetic-statements.js";
 import type { DiscoveredStatement } from "./types.js";
+import type { MatchableRule } from "../categorization/rule-matching.js";
 
 function noPriorImports() {
   return {
@@ -124,6 +125,32 @@ test("deduplicates a transaction that repeats within the same run, across two di
     assert.equal(febResult.decision.rows.length, 1, "the first statement to run keeps the transaction");
     assert.equal(marResult.decision.rows.length, 0, "the later statement sees it as already imported this run");
     assert.equal(marResult.decision.duplicateTransactions, 1);
+  }
+});
+
+test("planImport applies a matching rule so the plan already carries a category, most-specific pattern wins", () => {
+  const tx = makeTransaction({ merchant: "SUPERMERCADO LIDER EXPRESS" });
+  const statement = makeBalancedStatement({ transactions: [tx] });
+  const rules: MatchableRule[] = [
+    { id: "broad", categoryId: "cat-broad", merchantPattern: "LIDER", createdAt: new Date("2024-01-01T00:00:00Z") },
+    { id: "specific", categoryId: "cat-specific", merchantPattern: "LIDER EXPRESS", createdAt: new Date("2025-01-01T00:00:00Z") },
+  ];
+
+  const [result] = planImport([{ filePath: "/inbox/a.pdf", statement }], { ...noPriorImports(), rules });
+
+  assert.equal(result.decision.kind, "import");
+  if (result.decision.kind === "import") {
+    assert.equal(result.decision.rows[0].categoryId, "cat-specific");
+  }
+});
+
+test("planImport leaves categoryId null when no rule is configured", () => {
+  const statement = makeBalancedStatement();
+  const [result] = planImport([{ filePath: "/inbox/a.pdf", statement }], noPriorImports());
+
+  assert.equal(result.decision.kind, "import");
+  if (result.decision.kind === "import") {
+    assert.equal(result.decision.rows[0].categoryId, null);
   }
 });
 

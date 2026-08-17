@@ -6,11 +6,13 @@ import type { RunImportDeps } from "./run-import.js";
 import { makeBalancedStatement, makeTransaction, makeUnbalancedStatement } from "./__fixtures__/synthetic-statements.js";
 import type { ParsedStatement } from "../../parsers/statement-text-parser.js";
 import type { PersistStatementParams } from "./db-deps.js";
+import type { MatchableRule } from "../categorization/rule-matching.js";
 
 interface FakeDepsOptions {
   files: Record<string, ParsedStatement | Error>;
   alreadyImportedStatementKeys?: Set<string>;
   alreadyImportedReferenceCodes?: Set<string>;
+  rules?: MatchableRule[];
 }
 
 function makeFakeDeps(options: FakeDepsOptions) {
@@ -34,6 +36,7 @@ function makeFakeDeps(options: FakeDepsOptions) {
       moves.push({ filePath, outcome });
       return `/inbox/${outcome}/${filePath.split("/").pop()}`;
     },
+    loadCategorizationRules: () => options.rules ?? [],
   };
 
   return { deps, moves, persisted };
@@ -133,6 +136,32 @@ test("a transaction already imported previously is skipped, and the count is ref
   assert.equal(summary.transactionsSkippedDuplicate, 1);
   assert.equal(persisted[0].rows.length, 1);
   assert.equal(persisted[0].rows[0].referenceCode, "222222222222");
+});
+
+test("applies an existing categorization rule to a newly imported transaction's merchant", async () => {
+  const tx = makeTransaction({ merchant: "TIENDA EJEMPLO SANTIAGO" });
+  const statement = makeBalancedStatement({ transactions: [tx] });
+  const rules: MatchableRule[] = [
+    { id: "rule-1", categoryId: "cat-groceries", merchantPattern: "tienda ejemplo", createdAt: new Date("2025-01-01T00:00:00Z") },
+  ];
+  const { deps, persisted } = makeFakeDeps({ files: { "/inbox/a.pdf": statement }, rules });
+
+  await runImport({ folderPath: "/inbox", dryRun: false, bank: "banco-chile", password: "" }, deps);
+
+  assert.equal(persisted[0].rows[0].categoryId, "cat-groceries");
+});
+
+test("leaves categoryId null when no rule matches the merchant", async () => {
+  const tx = makeTransaction({ merchant: "SOMEWHERE ELSE" });
+  const statement = makeBalancedStatement({ transactions: [tx] });
+  const rules: MatchableRule[] = [
+    { id: "rule-1", categoryId: "cat-groceries", merchantPattern: "tienda ejemplo", createdAt: new Date("2025-01-01T00:00:00Z") },
+  ];
+  const { deps, persisted } = makeFakeDeps({ files: { "/inbox/a.pdf": statement }, rules });
+
+  await runImport({ folderPath: "/inbox", dryRun: false, bank: "banco-chile", password: "" }, deps);
+
+  assert.equal(persisted[0].rows[0].categoryId, null);
 });
 
 test("statements are processed and persisted oldest-first even when discovered out of order", async () => {

@@ -1,5 +1,5 @@
 import { parseBancoChileCreditCardStatement } from "../../parsers/banco-chile-credit-card.js";
-import { isStatementAlreadyImported, isTransactionAlreadyImported, persistImportedStatement } from "./db-deps.js";
+import { isStatementAlreadyImported, isTransactionAlreadyImported, loadCategorizationRules, persistImportedStatement } from "./db-deps.js";
 import { discoverPdfPaths, moveStatementFile } from "./fs-walk.js";
 import type { RunImportDeps } from "./run-import.js";
 
@@ -12,5 +12,6 @@ export function createLiveImportDeps(): RunImportDeps {
     isTransactionAlreadyImported,
     persistImportedStatement,
     moveStatementFile,
+    loadCategorizationRules,
   };
 }

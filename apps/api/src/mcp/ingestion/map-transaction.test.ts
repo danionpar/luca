@@ -49,6 +49,14 @@ test("mapTransactionRow carries the reference code through for later dedup", () 
   assert.equal(row.referenceCode, "555555555555");
 });
 
+test("mapTransactionRow carries the parser's own section classification through unchanged", () => {
+  const statement = makeBalancedStatement();
+  const tx = makeTransaction({ section: "installment" });
+  const row = mapTransactionRow("banco-chile", statement, tx);
+
+  assert.equal(row.section, "installment");
+});
+
 test("mapTransactionRow carries the parser's city into description, since transactions has no location column", () => {
   const statement = makeBalancedStatement();
   const tx = makeTransaction({ location: "PROVIDENCIA" });

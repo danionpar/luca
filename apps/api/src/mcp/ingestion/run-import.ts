@@ -1,3 +1,4 @@
+import type { MatchableRule } from "../categorization/rule-matching.js";
 import type { ParsedStatement } from "../../parsers/statement-text-parser.js";
 import type { PersistStatementParams } from "./db-deps.js";
 import type { StatementIdentity } from "./natural-key.js";
@@ -25,6 +26,8 @@ export interface RunImportDeps {
   isTransactionAlreadyImported: (referenceCode: string) => boolean;
   persistImportedStatement: (params: PersistStatementParams) => void;
   moveStatementFile: (filePath: string, rootFolder: string, outcome: "processed" | "failed") => Promise<string>;
+  /** Loaded once per run and applied to every newly-mapped row, so imports arrive progressively categorized. */
+  loadCategorizationRules: () => MatchableRule[];
 }
 
 /**
@@ -54,6 +57,7 @@ export async function runImport(options: RunImportOptions, deps: RunImportDeps):
     bank: options.bank,
     isStatementAlreadyImported: deps.isStatementAlreadyImported,
     isTransactionAlreadyImported: deps.isTransactionAlreadyImported,
+    rules: deps.loadCategorizationRules(),
   });
 
   const results: StatementResult[] = [];

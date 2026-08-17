@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../../db/index.js";
-import { importedStatements, transactions } from "../../db/schema.js";
+import { categorizationRules, importedStatements, transactions } from "../../db/schema.js";
+import type { MatchableRule } from "../categorization/rule-matching.js";
 import type { NewTransactionRow } from "./map-transaction.js";
 import type { StatementIdentity } from "./natural-key.js";
 
@@ -23,6 +24,14 @@ export function isStatementAlreadyImported(identity: StatementIdentity): boolean
 export function isTransactionAlreadyImported(referenceCode: string): boolean {
   const row = db.select({ id: transactions.id }).from(transactions).where(eq(transactions.referenceCode, referenceCode)).get();
   return row !== undefined;
+}
+
+/** Loads every stored categorization rule for `planImport` to apply to newly-mapped rows. */
+export function loadCategorizationRules(): MatchableRule[] {
+  return db
+    .select({ id: categorizationRules.id, categoryId: categorizationRules.categoryId, merchantPattern: categorizationRules.merchantPattern, createdAt: categorizationRules.createdAt })
+    .from(categorizationRules)
+    .all();
 }
 
 export interface PersistStatementParams extends StatementIdentity {

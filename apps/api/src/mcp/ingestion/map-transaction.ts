@@ -3,10 +3,15 @@ import type { ParsedStatement, ParsedTransaction } from "../../parsers/statement
 /**
  * The row shape inserted into the `transactions` table for a statement-
  * sourced transaction. Money stays an integer (Chilean pesos, no cents).
- * `categoryId` is always null here — categorization is a separate task.
+ * `categoryId` starts null out of this mapping function and is filled in
+ * afterward by `planImport` applying stored categorization rules — this
+ * function itself never touches the rules table.
  */
 export interface NewTransactionRow {
-  categoryId: null;
+  // Null until a categorization rule matches; see `applyRulesToRows` in
+  // `rule-application.ts`, which `planImport` runs over every row before
+  // it is persisted.
+  categoryId: string | null;
   type: "expense";
   amount: number;
   merchant: string | null;
@@ -16,6 +21,7 @@ export interface NewTransactionRow {
   bank: string;
   referenceCode: string;
   billingMonth: string;
+  section: ParsedTransaction["section"];
   isProjected: boolean;
   installmentCurrent: number | null;
   installmentTotal: number | null;
@@ -75,6 +81,7 @@ export function mapTransactionRow(bank: string, statement: ParsedStatement, tx: 
     bank,
     referenceCode: tx.referenceCode,
     billingMonth: billingMonthFor(statement),
+    section: tx.section,
     isProjected: false,
     installmentCurrent: current,
     installmentTotal: total,

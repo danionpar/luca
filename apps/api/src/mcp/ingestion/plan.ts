@@ -1,6 +1,8 @@
+import type { MatchableRule } from "../categorization/rule-matching.js";
 import { buildStatementNaturalKey } from "./natural-key.js";
 import type { StatementIdentity } from "./natural-key.js";
 import { mapTransactionRow } from "./map-transaction.js";
+import { applyRulesToRows } from "./rule-application.js";
 import type { DiscoveredStatement, PlannedStatement } from "./types.js";
 
 /**
@@ -21,6 +23,13 @@ export interface PlanContext {
   bank: string;
   isStatementAlreadyImported: (identity: StatementIdentity) => boolean;
   isTransactionAlreadyImported: (referenceCode: string) => boolean;
+  /**
+   * Stored categorization rules, applied to every newly-mapped row so each
+   * import arrives progressively cleaner. Defaults to none, so callers that
+   * don't care about categorization (most existing tests) don't have to
+   * thread an empty array through.
+   */
+  rules?: MatchableRule[];
 }
 
 /**
@@ -90,7 +99,7 @@ export function planImport(statements: DiscoveredStatement[], ctx: PlanContext):
     }
 
     seenStatementKeys.add(naturalKey);
-    results.push({ ...base, decision: { kind: "import", rows, duplicateTransactions } });
+    results.push({ ...base, decision: { kind: "import", rows: applyRulesToRows(rows, ctx.rules ?? []), duplicateTransactions } });
   }
 
   return results;
