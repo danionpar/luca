@@ -6,6 +6,12 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 export const transactionTypes = ["income", "expense", "saving"] as const;
 export const transactionSources = ["email", "manual", "statement"] as const;
 export const categoryTypes = ["income", "expense", "saving"] as const;
+// Mirrors the parser's own `ParsedTransaction["section"]` (see
+// statement-text-parser.ts) — the printed statement section a line belongs
+// to. Persisted from the parser's own classification at ingestion time so it
+// never has to be re-derived from amount sign or installment counts, which
+// cannot reliably distinguish e.g. a PAT from a manual payment.
+export const transactionSections = ["single", "installment", "charge", "payment", "pat"] as const;
 
 // App tables
 export const categories = sqliteTable("categories", {
@@ -50,6 +56,11 @@ export const transactions = sqliteTable("transactions", {
   // the statement-level duplicate check.
   referenceCode: text("reference_code"),
   billingMonth: text("billing_month"), // YYYY-MM, the statement cycle this belongs to
+  // The printed statement section this row came from. Nullable because rows
+  // imported before this column existed have no value here — see
+  // `effectiveSectionExpr` in mcp/queries/section.ts for how those legacy
+  // rows are surfaced instead of silently mis-bucketed.
+  section: text("section", { enum: transactionSections }),
   isProjected: integer("is_projected", { mode: "boolean" })
     .notNull()
     .default(false),
