@@ -50,19 +50,24 @@ Tests that need a real bank statement skip automatically when none is configured
 
 ### Connect it to Claude Code
 
-The server talks MCP over stdio — no port, no auth, nothing to run in the background. Register it with:
+The server talks MCP over stdio — no port, no auth, nothing to run in the background.
 
 ```bash
-claude mcp add luca -- npx tsx /absolute/path/to/budget-poc/apps/api/src/mcp/server.ts
+claude mcp add luca -s user -- "$PWD/node_modules/.bin/tsx" "$PWD/apps/api/src/mcp/server.ts"
 ```
 
-(Swap in your own clone's absolute path — `claude mcp add` doesn't take a working directory, so the path to `server.ts` has to be absolute.)
+Run that from the repository root after `pnpm install`. Two details matter:
 
-Once it's connected, just ask, in a new Claude Code session:
+- **`-s user`** registers it for every project on your machine. The default scope is `local`, which is private to the directory you ran the command in — so the server would be invisible from any other session.
+- **Absolute paths, and the repo's own `tsx`.** `claude mcp add` takes no working directory, and the client launches the server from wherever the user happens to be. Using the local `tsx` binary rather than `npx tsx` avoids a resolution step at every start.
+
+The database path is resolved against the package, not the caller's working directory, so the server sees the same data no matter where it is launched from.
+
+Once connected, ask in any Claude Code session:
 
 > "What did I spend on in March, and how much of it is still uncategorized?"
 
-`claude mcp list` confirms it's connected; `claude mcp get luca` shows the exact command it's running.
+`claude mcp list` confirms it is connected; `claude mcp get luca` shows the exact command.
 
 ## How it works
 
