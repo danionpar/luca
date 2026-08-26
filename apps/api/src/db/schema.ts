@@ -82,7 +82,13 @@ export const categorizationRules = sqliteTable("categorization_rules", {
     .notNull()
     .references(() => categories.id, { onDelete: "cascade" }),
   merchantPattern: text("merchant_pattern").notNull(),
-  timesUsed: integer("times_used").notNull().default(1),
+  // Count of transactions this rule has actually categorized — bumped at
+  // ingestion time (`applyRulesToRows`, see rule-application.ts) and, when
+  // `create_rule` is called with `applyToExisting: true`, by the rows that
+  // immediate pass touches. Starts at 0: a freshly created rule has
+  // categorized nothing yet. Used as a tiebreaker in `pickMatchingRule`
+  // when two rules of equal pattern specificity match the same merchant.
+  timesUsed: integer("times_used").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),

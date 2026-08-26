@@ -132,8 +132,8 @@ test("planImport applies a matching rule so the plan already carries a category,
   const tx = makeTransaction({ merchant: "SUPERMERCADO LIDER EXPRESS" });
   const statement = makeBalancedStatement({ transactions: [tx] });
   const rules: MatchableRule[] = [
-    { id: "broad", categoryId: "cat-broad", merchantPattern: "LIDER", createdAt: new Date("2024-01-01T00:00:00Z") },
-    { id: "specific", categoryId: "cat-specific", merchantPattern: "LIDER EXPRESS", createdAt: new Date("2025-01-01T00:00:00Z") },
+    { id: "broad", categoryId: "cat-broad", merchantPattern: "LIDER", timesUsed: 0, createdAt: new Date("2024-01-01T00:00:00Z") },
+    { id: "specific", categoryId: "cat-specific", merchantPattern: "LIDER EXPRESS", timesUsed: 0, createdAt: new Date("2025-01-01T00:00:00Z") },
   ];
 
   const [result] = planImport([{ filePath: "/inbox/a.pdf", statement }], { ...noPriorImports(), rules });
@@ -141,6 +141,7 @@ test("planImport applies a matching rule so the plan already carries a category,
   assert.equal(result.decision.kind, "import");
   if (result.decision.kind === "import") {
     assert.equal(result.decision.rows[0].categoryId, "cat-specific");
+    assert.deepEqual(result.decision.ruleUsage, { specific: 1 }, "only the winning rule is credited, and no unmatched rule gets a zero entry");
   }
 });
 

@@ -4,6 +4,24 @@ import { runMutation, runQuery, runQueryOne } from "../queries/raw-sql.js";
 import type { BulkCategorizeResult } from "./bulk-categorize.js";
 import { bulkCategorize } from "./bulk-categorize.js";
 
+/**
+ * Credits every rule in `ruleUsage` (rule id -> row count) with having
+ * categorized that many more transactions: `times_used` goes up by exactly
+ * that count and `updated_at` moves forward, in one write per rule. A rule
+ * id with no entry in `ruleUsage` is left completely untouched.
+ *
+ * Shared by every path that actually applies a rule to a transaction —
+ * `createRule`'s `applyToExisting` pass and the ingestion pipeline's
+ * `persistImportedStatement` (see db-deps.ts) both funnel through this, so
+ * "what counts as a rule being used" has exactly one implementation.
+ */
+export function creditRuleUsage(db: LucaDb, ruleUsage: Record<string, number>): void {
+  for (const [ruleId, count] of Object.entries(ruleUsage)) {
+    if (count <= 0) continue;
+    runMutation(db, "UPDATE categorization_rules SET times_used = times_used + ?, updated_at = unixepoch() WHERE id = ?", [count, ruleId]);
+  }
+}
+
 export interface RuleRow {
   id: string;
   categoryId: string;
@@ -48,11 +66,16 @@ export interface CreateRuleResult {
  * runs will apply automatically to newly imported transactions (see
  * `applyRulesToRows` in the ingestion pipeline).
  *
- * Pass `applyToExisting: true` to also apply it right away to transactions
- * that already exist and currently have no category — it deliberately never
- * overwrites a transaction that already has a different category, since
- * that may have been set intentionally; use `bulk_categorize` directly (it
- * has no such restriction) to override existing categorizations instead.
+ * A freshly created rule starts with `timesUsed: 0` — it has not
+ * categorized anything yet. Pass `applyToExisting: true` to also apply it
+ * right away to transactions that already exist and currently have no
+ * category — it deliberately never overwrites a transaction that already
+ * has a different category, since that may have been set intentionally;
+ * use `bulk_categorize` directly (it has no such restriction) to override
+ * existing categorizations instead. When this immediate pass does touch
+ * rows, `timesUsed` is set to exactly how many it touched (`applied.updated`)
+ * rather than staying at 0, so the counter always reflects transactions the
+ * rule has actually categorized.
  */
 export function createRule(db: LucaDb, options: CreateRuleOptions): CreateRuleResult {
   const [inserted] = db
@@ -61,24 +84,29 @@ export function createRule(db: LucaDb, options: CreateRuleOptions): CreateRuleRe
     .returning()
     .all();
 
-  const rule = toRuleRow({
-    id: inserted.id,
-    categoryId: inserted.categoryId,
-    merchantPattern: inserted.merchantPattern,
-    timesUsed: inserted.timesUsed,
-    createdAt: Math.floor(inserted.createdAt.getTime() / 1000),
-    updatedAt: Math.floor(inserted.updatedAt.getTime() / 1000),
-  });
+  let applied: BulkCategorizeResult | undefined;
 
-  if (!options.applyToExisting) return { rule };
+  if (options.applyToExisting) {
+    applied = bulkCategorize(db, {
+      merchantPattern: options.merchantPattern,
+      categoryId: options.categoryId,
+      onlyUncategorized: true,
+    });
 
-  const applied = bulkCategorize(db, {
-    merchantPattern: options.merchantPattern,
-    categoryId: options.categoryId,
-    onlyUncategorized: true,
-  });
+    creditRuleUsage(db, { [inserted.id]: applied.updated });
+  }
 
-  return { rule, applied };
+  // Re-read rather than trust `inserted`: `creditRuleUsage` may just have
+  // moved `times_used` and `updated_at` forward in the database.
+  const stored = runQueryOne<RawRuleRow>(
+    db,
+    `SELECT id, category_id as categoryId, merchant_pattern as merchantPattern, times_used as timesUsed, created_at as createdAt, updated_at as updatedAt
+     FROM categorization_rules WHERE id = ?`,
+    [inserted.id],
+  );
+  if (!stored) throw new Error(`Rule ${inserted.id} vanished immediately after being inserted.`);
+
+  return { rule: toRuleRow(stored), applied };
 }
 
 /** Every stored categorization rule, oldest first (the order ties resolve in favor of, when matching). */

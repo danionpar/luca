@@ -99,7 +99,8 @@ export function planImport(statements: DiscoveredStatement[], ctx: PlanContext):
     }
 
     seenStatementKeys.add(naturalKey);
-    results.push({ ...base, decision: { kind: "import", rows: applyRulesToRows(rows, ctx.rules ?? []), duplicateTransactions } });
+    const { rows: categorizedRows, ruleUsage } = applyRulesToRows(rows, ctx.rules ?? []);
+    results.push({ ...base, decision: { kind: "import", rows: categorizedRows, duplicateTransactions, ruleUsage } });
   }
 
   return results;

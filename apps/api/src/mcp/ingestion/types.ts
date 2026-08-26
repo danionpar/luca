@@ -21,7 +21,13 @@ export interface UnparseableFile {
 export type StatementDecision =
   | { kind: "skip_duplicate" }
   | { kind: "refuse_reconciliation"; checks: SectionReconciliation[] }
-  | { kind: "import"; rows: NewTransactionRow[]; duplicateTransactions: number };
+  | {
+      kind: "import";
+      rows: NewTransactionRow[];
+      duplicateTransactions: number;
+      /** How many rows each categorization rule (by id) categorized in this statement's rows — see `applyRulesToRows`. */
+      ruleUsage: Record<string, number>;
+    };
 
 export interface PlannedStatement {
   filePath: string;

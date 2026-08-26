@@ -142,26 +142,28 @@ test("applies an existing categorization rule to a newly imported transaction's 
   const tx = makeTransaction({ merchant: "TIENDA EJEMPLO SANTIAGO" });
   const statement = makeBalancedStatement({ transactions: [tx] });
   const rules: MatchableRule[] = [
-    { id: "rule-1", categoryId: "cat-groceries", merchantPattern: "tienda ejemplo", createdAt: new Date("2025-01-01T00:00:00Z") },
+    { id: "rule-1", categoryId: "cat-groceries", merchantPattern: "tienda ejemplo", timesUsed: 0, createdAt: new Date("2025-01-01T00:00:00Z") },
   ];
   const { deps, persisted } = makeFakeDeps({ files: { "/inbox/a.pdf": statement }, rules });
 
   await runImport({ folderPath: "/inbox", dryRun: false, bank: "banco-chile", password: "" }, deps);
 
   assert.equal(persisted[0].rows[0].categoryId, "cat-groceries");
+  assert.deepEqual(persisted[0].ruleUsage, { "rule-1": 1 }, "the rule that categorized the row is credited with exactly the rows it matched");
 });
 
 test("leaves categoryId null when no rule matches the merchant", async () => {
   const tx = makeTransaction({ merchant: "SOMEWHERE ELSE" });
   const statement = makeBalancedStatement({ transactions: [tx] });
   const rules: MatchableRule[] = [
-    { id: "rule-1", categoryId: "cat-groceries", merchantPattern: "tienda ejemplo", createdAt: new Date("2025-01-01T00:00:00Z") },
+    { id: "rule-1", categoryId: "cat-groceries", merchantPattern: "tienda ejemplo", timesUsed: 0, createdAt: new Date("2025-01-01T00:00:00Z") },
   ];
   const { deps, persisted } = makeFakeDeps({ files: { "/inbox/a.pdf": statement }, rules });
 
   await runImport({ folderPath: "/inbox", dryRun: false, bank: "banco-chile", password: "" }, deps);
 
   assert.equal(persisted[0].rows[0].categoryId, null);
+  assert.deepEqual(persisted[0].ruleUsage, {}, "a rule that matches nothing gets no entry at all, not a zero one");
 });
 
 test("statements are processed and persisted oldest-first even when discovered out of order", async () => {

@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { categorizationRules, importedStatements, transactions } from "../../db/schema.js";
 import type { MatchableRule } from "../categorization/rule-matching.js";
@@ -29,7 +29,13 @@ export function isTransactionAlreadyImported(referenceCode: string): boolean {
 /** Loads every stored categorization rule for `planImport` to apply to newly-mapped rows. */
 export function loadCategorizationRules(): MatchableRule[] {
   return db
-    .select({ id: categorizationRules.id, categoryId: categorizationRules.categoryId, merchantPattern: categorizationRules.merchantPattern, createdAt: categorizationRules.createdAt })
+    .select({
+      id: categorizationRules.id,
+      categoryId: categorizationRules.categoryId,
+      merchantPattern: categorizationRules.merchantPattern,
+      timesUsed: categorizationRules.timesUsed,
+      createdAt: categorizationRules.createdAt,
+    })
     .from(categorizationRules)
     .all();
 }
@@ -38,11 +44,17 @@ export interface PersistStatementParams extends StatementIdentity {
   statementDate: string;
   totalBilled: number;
   rows: NewTransactionRow[];
+  /** How many rows each categorization rule (by id) categorized among `rows` — see `applyRulesToRows`. */
+  ruleUsage: Record<string, number>;
 }
 
 /**
  * Writes the imported-statement record and its transactions in a single
  * SQLite transaction: either the whole statement lands, or none of it does.
+ * Also credits every rule that categorized at least one of these rows —
+ * `timesUsed` goes up by exactly the number of rows it matched here, and
+ * `updatedAt` moves forward, all inside the same transaction as the rows
+ * themselves.
  */
 export function persistImportedStatement(params: PersistStatementParams): void {
   db.transaction((tx) => {
@@ -60,6 +72,13 @@ export function persistImportedStatement(params: PersistStatementParams): void {
 
     if (params.rows.length > 0) {
       tx.insert(transactions).values(params.rows).run();
+    }
+
+    for (const [ruleId, count] of Object.entries(params.ruleUsage)) {
+      tx.update(categorizationRules)
+        .set({ timesUsed: sql`${categorizationRules.timesUsed} + ${count}`, updatedAt: new Date() })
+        .where(eq(categorizationRules.id, ruleId))
+        .run();
     }
   });
 }

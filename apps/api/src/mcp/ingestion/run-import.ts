@@ -111,6 +111,7 @@ export async function runImport(options: RunImportOptions, deps: RunImportDeps):
         statementDate: plan.statementDate,
         totalBilled: plan.totalBilled,
         rows: plan.decision.rows,
+        ruleUsage: plan.decision.ruleUsage,
       });
     }
     const movedTo = options.dryRun ? null : await deps.moveStatementFile(plan.filePath, options.folderPath, "processed");
