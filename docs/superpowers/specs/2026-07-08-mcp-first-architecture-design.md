@@ -75,6 +75,34 @@ Insight layer: `save_insight`, `search_insights`, `link_insights`, `supersede_in
 
 Write tools take structured parameters; the model fills fields, it does not compose free-form rows. Bulk inserts come from the parser, which is deterministic.
 
+### Categorisation rules: from one criterion to several (added 2026-08-26)
+
+The first rules engine matches on one thing: a case-insensitive substring of the merchant.
+Nine months of real statements validated that choice — an audit of 29 rules the owner wrote by
+hand found twelve that match more than one distinct merchant string, and **none of them was a
+false positive**. Every multi-match was the same merchant wearing a different face: branch
+numbers (`40654SBX`, `40535SBX` — all one coffee chain), bank truncation (`METLIFE SEGUROS D`,
+`METLIFE SEGUROS D**`), and payment-gateway prefixes (`MP *BELENUS` alongside
+`BELENUS COSTANERA`). Substring matching absorbs exactly the noise real statements carry, so
+regex is not needed and would cost readability for nothing.
+
+Where a single criterion genuinely runs out is the **opaque payment gateway**. `PAYU` alone
+accounts for 108 transactions and roughly 1.04M CLP with no merchant name attached at all,
+while `PAYU *NESPRESSO` and `MERCADOPAGO*ELLESSE` carry theirs. The bare form is unclassifiable
+by merchant, and no amount of pattern work fixes that — the information is simply not in the
+field.
+
+The answer is not a catch-all "unidentified" category, which would only rename the problem.
+It is to let a rule combine criteria: merchant pattern **and** an amount range, **and** whether
+the row is an instalment, **and** the billing cycle, and so on. A recurring 15,990 through PAYU
+on the same day each month is a subscription no matter what the merchant field says.
+
+This is deliberately sequenced **after** the insight layer rather than before it. Multi-criteria
+rules are only worth building once something can propose them: the layer detects that a cluster
+of PAYU rows shares an amount and a cadence, surfaces that as an observation with its evidence,
+and the owner turns the ones she recognises into rules. Building the mechanism first would leave
+her hand-authoring compound conditions, which is worse than what she has today.
+
 ### Statement ingestion
 
 Import is folder-based. One tool call points at a directory, and the server walks it recursively for PDFs.
