@@ -11,6 +11,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/db/seed.ts",
+    "db:seed-insights": "tsx src/db/seed-insights.ts",
     "db:backup": "tsx src/db/backup.ts",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "test:watch": "node --import tsx --test --watch \"src/**/*.test.ts\"",
