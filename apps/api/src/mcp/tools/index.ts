@@ -11,6 +11,14 @@ import { registerCreateRuleTool } from "./create-rule.js";
 import { registerListRulesTool } from "./list-rules.js";
 import { registerDeleteRuleTool } from "./delete-rule.js";
 import { registerProjectedCommitmentsTool } from "./projected-commitments.js";
+import { registerSaveInsightTool } from "./save-insight.js";
+import { registerSearchInsightsTool } from "./search-insights.js";
+import { registerGetInsightTool } from "./get-insight.js";
+import { registerLinkInsightsTool } from "./link-insights.js";
+import { registerListInsightsTool } from "./list-insights.js";
+import { registerPinInsightTool } from "./pin-insight.js";
+import { registerUnpinInsightTool } from "./unpin-insight.js";
+import { registerDeleteInsightTool } from "./delete-insight.js";
 
 /**
  * Registers every tool this server exposes. This is the one place that
@@ -32,4 +40,13 @@ export function registerTools(server: McpServer): void {
   registerDeleteRuleTool(server);
 
   registerProjectedCommitmentsTool(server);
+
+  registerSaveInsightTool(server);
+  registerSearchInsightsTool(server);
+  registerGetInsightTool(server);
+  registerLinkInsightsTool(server);
+  registerListInsightsTool(server);
+  registerPinInsightTool(server);
+  registerUnpinInsightTool(server);
+  registerDeleteInsightTool(server);
 }
