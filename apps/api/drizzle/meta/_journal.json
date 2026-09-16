@@ -29,6 +29,20 @@
       "when": 1787716189452,
       "tag": "0003_luxuriant_karen_page",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789522606597,
+      "tag": "0004_oval_gravity",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1789537757513,
+      "tag": "0005_observations_fts5",
+      "breakpoints": true
     }
   ]
 }
