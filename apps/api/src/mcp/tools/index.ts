@@ -19,6 +19,7 @@ import { registerListInsightsTool } from "./list-insights.js";
 import { registerPinInsightTool } from "./pin-insight.js";
 import { registerUnpinInsightTool } from "./unpin-insight.js";
 import { registerDeleteInsightTool } from "./delete-insight.js";
+import { registerDetectRecurringTool } from "./detect-recurring.js";
 
 /**
  * Registers every tool this server exposes. This is the one place that
@@ -49,4 +50,6 @@ export function registerTools(server: McpServer): void {
   registerPinInsightTool(server);
   registerUnpinInsightTool(server);
   registerDeleteInsightTool(server);
+
+  registerDetectRecurringTool(server);
 }
