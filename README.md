@@ -29,10 +29,10 @@ The problem it solves is the boring one. Your bank emails you a PDF every month.
 | Banco de Chile credit card statement parser | Working, reconciles exactly against 9 real statements |
 | Self-verification against printed totals | Working, committed as tests |
 | Local SQLite store | Working — a single file on your machine |
-| MCP server | Working — 12 tools over stdio |
+| MCP server | Working — 23 tools over stdio |
 | Statement import, with reconciliation gating | Working — refuses any statement that doesn't balance |
 | Query and categorisation tools | Working |
-| Insight layer (spending patterns) | Designed, not built |
+| Insight layer (spending patterns) | Working — an engram-style observation store plus deterministic detectors (`detect_recurring`, `category_trend`, `detect_anomalies`) that only ever *propose*; the owner confirms |
 | Web UI | Removed. The project is now MCP-first; conversation replaces the dashboard |
 
 The target architecture is written up in [`docs/superpowers/specs/2026-07-08-mcp-first-architecture-design.md`](docs/superpowers/specs/2026-07-08-mcp-first-architecture-design.md).
