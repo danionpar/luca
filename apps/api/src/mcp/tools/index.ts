@@ -22,6 +22,7 @@ import { registerDeleteInsightTool } from "./delete-insight.js";
 import { registerDetectRecurringTool } from "./detect-recurring.js";
 import { registerCategoryTrendTool } from "./category-trend.js";
 import { registerDetectAnomaliesTool } from "./detect-anomalies.js";
+import { registerRenderDashboardTool } from "./render-dashboard.js";
 
 /**
  * Registers every tool this server exposes. This is the one place that
@@ -56,4 +57,6 @@ export function registerTools(server: McpServer): void {
   registerDetectRecurringTool(server);
   registerCategoryTrendTool(server);
   registerDetectAnomaliesTool(server);
+
+  registerRenderDashboardTool(server);
 }

@@ -20,6 +20,11 @@ statements/
 # Local-only output derived from real statements — never committed
 .local/
 
+# Rendered spending dashboards embed real data (default output is
+# ~/Documents/luca/, outside the repo; these catch an overridden path)
+dashboard.html
+luca-dashboard*.html
+
 # Generated local indexes and caches (per-checkout, not portable)
 .codegraph/
 .atl/
