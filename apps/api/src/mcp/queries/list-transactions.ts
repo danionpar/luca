@@ -29,6 +29,7 @@ export interface TransactionRow {
   date: string;
   merchant: string | null;
   description: string | null;
+  city: string | null;
   amount: number;
   categoryId: string | null;
   section: EffectiveSection;
@@ -111,6 +112,7 @@ export function listTransactions(db: LucaDb, filters: ListTransactionsFilters = 
       transaction_date as date,
       merchant,
       description,
+      city,
       amount,
       category_id as categoryId,
       (${EFFECTIVE_SECTION_SQL}) as section,

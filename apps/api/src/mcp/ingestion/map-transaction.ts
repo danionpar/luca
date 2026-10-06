@@ -16,6 +16,7 @@ export interface NewTransactionRow {
   amount: number;
   merchant: string | null;
   description: string | null;
+  city: string | null;
   transactionDate: string;
   source: "statement";
   bank: string;
@@ -59,9 +60,8 @@ export function splitInstallment(installment: string | null): { current: number 
  * line adjustment as earnings. This is a deliberate modeling choice for the
  * ingestion layer — categorization (the next task) is free to refine it.
  *
- * The parser's `location` field (the city, e.g. "SANTIAGO") has no column
- * of its own on `transactions`, so it is carried in `description` rather
- * than discarded.
+ * The parser's `location` field (the city, e.g. "SANTIAGO") is stored raw in
+ * `city`. `description` is left null: it belongs to the owner's own notes.
  *
  * `isProjected` is always false: the current parser does not yet emit
  * forward-projected future installment rows (the statement's "future
@@ -75,7 +75,8 @@ export function mapTransactionRow(bank: string, statement: ParsedStatement, tx: 
     type: "expense",
     amount: tx.amount,
     merchant: tx.merchant || null,
-    description: tx.location || null,
+    description: null,
+    city: tx.location || null,
     transactionDate: tx.date,
     source: "statement",
     bank,

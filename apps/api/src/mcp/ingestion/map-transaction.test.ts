@@ -57,10 +57,11 @@ test("mapTransactionRow carries the parser's own section classification through 
   assert.equal(row.section, "installment");
 });
 
-test("mapTransactionRow carries the parser's city into description, since transactions has no location column", () => {
+test("mapTransactionRow stores the parser's city in city and leaves description for the owner's notes", () => {
   const statement = makeBalancedStatement();
   const tx = makeTransaction({ location: "PROVIDENCIA" });
   const row = mapTransactionRow("banco-chile", statement, tx);
 
-  assert.equal(row.description, "PROVIDENCIA");
+  assert.equal(row.city, "PROVIDENCIA");
+  assert.equal(row.description, null);
 });

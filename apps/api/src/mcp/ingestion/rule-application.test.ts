@@ -12,6 +12,7 @@ function row(overrides: Partial<NewTransactionRow> = {}): NewTransactionRow {
     amount: 1000,
     merchant: "SAMPLE MERCHANT",
     description: null,
+    city: null,
     transactionDate: "2025-03-15",
     source: "statement",
     bank: "banco-chile",

@@ -5,7 +5,7 @@ import { DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT, listTransactions } from "../queries
 
 const DESCRIPTION = `Lists individual transactions with filters, paginated.
 
-What it returns: a compact row per transaction (date, merchant, description, amount, categoryId, section, installment position if any, billing month), plus totalCount and hasMore for pagination. Rows are newest purchase-date first.
+What it returns: a compact row per transaction (date, merchant, description (the owner's own note, usually empty), city, amount, categoryId, section, installment position if any, billing month), plus totalCount and hasMore for pagination. Rows are newest purchase-date first.
 
 Filters (all optional, AND-combined):
 - month: the statement/billing cycle (e.g. "2026-03"), NOT the original purchase date. An installment purchased in April 2024 can still show up in the "2026-03" billing month if it's still being paid off — use dateFrom/dateTo instead when the original purchase date is what matters.

@@ -38,6 +38,7 @@ export interface SeedTransactionOverrides {
   amount?: number;
   merchant?: string | null;
   description?: string | null;
+  city?: string | null;
   transactionDate?: string;
   billingMonth?: string | null;
   section?: "single" | "installment" | "charge" | "payment" | "pat" | null;
@@ -65,6 +66,7 @@ export function seedTransaction(db: LucaDb, overrides: SeedTransactionOverrides 
       amount: overrides.amount ?? 1000,
       merchant: pick(overrides, "merchant", "SAMPLE MERCHANT"),
       description: pick(overrides, "description", null),
+      city: pick(overrides, "city", null),
       transactionDate: overrides.transactionDate ?? "2025-03-15",
       billingMonth: pick(overrides, "billingMonth", "2025-03"),
       section: pick(overrides, "section", "single"),

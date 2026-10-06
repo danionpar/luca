@@ -41,7 +41,12 @@ export const transactions = sqliteTable("transactions", {
   // Chilean pesos have no cents — money columns are always integers, never floats.
   amount: integer("amount").notNull(),
   merchant: text("merchant"),
+  // The owner's own free-text note about a purchase. Never written by
+  // statement ingestion (the city has its own column below).
   description: text("description"),
+  // The city the bank printed next to the purchase, kept raw (the bank
+  // truncates some names, e.g. "PROVIDENCI"). Null for rows without one.
+  city: text("city"),
   // YYYY-MM-DD, kept as plain text — never a native date/timestamp type.
   transactionDate: text("transaction_date").notNull(),
   source: text("source", { enum: transactionSources })
