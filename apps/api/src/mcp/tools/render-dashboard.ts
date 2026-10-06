@@ -5,7 +5,7 @@ import { DEFAULT_DASHBOARD_PATH, writeDashboard } from "../dashboard/write-dashb
 
 const DESCRIPTION = `Renders a local, self-contained HTML spending dashboard and returns the path of the file it wrote. Opens it in the default browser on macOS unless told not to.
 
-What the page shows: total spend, months covered, transaction count and % categorised for the selected period; spend by month, by category, by category and month, and by city; a year selector and a month filter; and a table view of every chart. Payments to the card are excluded, so totals tie out with monthly_summary (net spend minus its payment and pat sections). Uncategorised spending is its own bucket, never hidden.
+What the page shows: total spend, months covered, transaction count and % categorised for the selected period; spend by month, by category, by category and month, and by city; a year selector and a month filter; and a table view of every chart. Payments to the card are excluded, so totals tie out with monthly_summary (net spend minus its payment section; pat bill payments count as spending). Uncategorised spending is its own bucket, never hidden.
 
 Privacy: the file contains real spending data, so by default it is written OUTSIDE the repository to ${DEFAULT_DASHBOARD_PATH}. The page makes no network requests of any kind (no CDN, fonts or fetches) — everything is inlined — so nothing leaves the machine. Pass outputPath only to write somewhere else that is also not under version control.
 

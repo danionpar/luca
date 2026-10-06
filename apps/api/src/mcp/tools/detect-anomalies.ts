@@ -14,7 +14,7 @@ const DESCRIPTION = `Finds categories whose total for a billing month deviates f
 
 For each category it compares the month's total with the average of the trailing window (default ${DEFAULT_TRAILING_MONTHS} months before it) and reports value, trailing average, delta, ratio and whether it is above or below. A category is flagged when the deviation is larger than threshold (default 50% of the average) AND at least minDelta CLP (default ${DEFAULT_MIN_DELTA.toLocaleString("en-US")}), so small categories are not flagged on noise.
 
-Thin series are never flagged: a category needs spend in at least minHistoryMonths trailing months (default ${DEFAULT_MIN_HISTORY_MONTHS}). Months before the first ever billing month are not counted as zero. Uncategorised is its own series. Excludes projected rows and the payment and pat sections.
+Thin series are never flagged: a category needs spend in at least minHistoryMonths trailing months (default ${DEFAULT_MIN_HISTORY_MONTHS}). Months before the first ever billing month are not counted as zero. Uncategorised is its own series. Excludes projected rows and the payment section; pat rows (automatic bill payments) count as spending.
 
 Defaults to the latest billing month with data.
 

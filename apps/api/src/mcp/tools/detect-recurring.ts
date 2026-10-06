@@ -10,7 +10,7 @@ How it clusters: rows are grouped by merchant AND an amount band, because one me
 
 What it deliberately EXCLUDES, and why:
 - Instalment rows (installment_total > 1): they repeat the same amount every month by construction, so including them would report every cuota as a "subscription" and drown the real signal. Use projected_commitments for instalments.
-- Card payments (payment and pat sections): money paid to the card is never spending.
+- Card payments (payment section): money paid to the card is never spending. Automatic bill payments (pat section: utilities and services charged to the card) are spending and ARE reported when they repeat.
 - Projected (future) rows, refunds (non-positive amounts), and rows with no merchant.
 
 Use it to discover what to categorise next, especially bare gateway merchants that no merchant-name rule can classify. Prefer list_uncategorized to triage by merchant name alone; prefer spending_by_category for plain totals.

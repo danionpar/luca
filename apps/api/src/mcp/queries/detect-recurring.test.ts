@@ -45,12 +45,24 @@ test("instalment rows are NOT reported as recurring", () => {
   assert.equal(detectRecurring(db).clusters.length, 0);
 });
 
-test("payment and pat rows are excluded", () => {
+test("payment rows are excluded", () => {
   const db = createTestDb();
   seedMonthly(db, "PAYMENT RECEIVED", 100000, { section: "payment" });
-  seedMonthly(db, "AUTO PAYMENT", 100000, { section: "pat" });
 
   assert.equal(detectRecurring(db).clusters.length, 0);
+});
+
+test("a monthly pat bill (same merchant, same amount) IS reported as recurring", () => {
+  const db = createTestDb();
+  seedMonthly(db, "ELECTRIC CO", 45000, { section: "pat" });
+
+  const { clusters } = detectRecurring(db);
+
+  assert.equal(clusters.length, 1);
+  assert.equal(clusters[0].merchant, "ELECTRIC CO");
+  assert.equal(clusters[0].cadence, "monthly");
+  assert.equal(clusters[0].months, 4);
+  assert.equal(clusters[0].totalAmount, 180000);
 });
 
 test("projected rows and refunds are excluded", () => {

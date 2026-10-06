@@ -63,9 +63,9 @@ export interface DashboardData {
 /**
  * Every aggregate the local dashboard draws, computed by SQLite over the
  * same "spending" rows the insight detectors use (`SPENDING_ROW_FILTER`:
- * not projected, has a billing month, and not a `payment`/`pat` row, which
- * is money sent TO the card). A month's total here therefore equals
- * `monthly_summary`'s net spend minus its `payment` and `pat` sections.
+ * not projected, has a billing month, and not a `payment` row, which
+ * is money sent TO the card; `pat` bills are spending). A month's total here therefore equals
+ * `monthly_summary`'s net spend minus its `payment` section.
  *
  * Uncategorized and city-less transactions each get their own explicit
  * bucket (`categoryId: null` / `city: null`) so no breakdown ever silently

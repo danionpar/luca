@@ -67,7 +67,7 @@ interface Row {
  * Months with no spend are zero-filled so a category that stopped (or
  * started) shows as falling (rising) instead of being averaged over fewer
  * points. Instalment rows count (they are real billed spending); projected
- * rows, card payments and PAT rows do not.
+ * rows, PAT bills count too; card payments do not.
  */
 export function categoryTrend(db: LucaDb, options: CategoryTrendOptions = {}): CategoryTrendResult {
   const months = options.months ?? DEFAULT_TREND_MONTHS;

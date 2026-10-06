@@ -8,7 +8,7 @@ const DESCRIPTION = `Per-category monthly totals over a window of billing months
 
 Direction comes from the least-squares slope of the monthly totals. A series is "flat" when its slope is within flatThreshold (default 5%) of its mean monthly total; otherwise it is rising or falling. Months with no spend count as zero, so a category that stopped or started shows up as a trend. Uncategorised spending is its own series (categoryId null) and is never hidden: how much is still unclassified is part of the picture.
 
-Counts instalment rows (they are billed spending). Excludes projected rows and the payment and pat sections (money paid to the card is not spending).
+Counts instalment rows (they are billed spending). Excludes projected rows and the payment section (money paid to the card is not spending); pat rows (automatic bill payments charged to the card) count as spending.
 
 Window: months (default ${DEFAULT_TREND_MONTHS}, minimum 3) ending at toMonth (default: the latest month with data).
 

@@ -78,7 +78,7 @@ interface RawCluster {
  * compared to the anchor, not to its neighbour).
  *
  * Excluded before clustering: instalment rows (`installment_total > 1` or
- * section `installment`; they repeat by construction), `payment` and `pat`
+ * section `installment`; they repeat by construction), `payment`
  * rows, projected rows, refunds (non-positive amounts), and rows without a
  * merchant or billing month.
  */

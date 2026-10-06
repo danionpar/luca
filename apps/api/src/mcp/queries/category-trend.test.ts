@@ -52,15 +52,16 @@ test("uncategorised spending is its own series and gaps are zero-filled", () => 
   assert.deepEqual(series[0].months.map((m) => m.total), [0, 0, 0, 5000, 10000, 15000]);
 });
 
-test("payment, pat and projected rows do not enter a series", () => {
+test("payment rows do not enter a series, pat rows do", () => {
   const db = createTestDb();
   const cat = seedCategory(db, { name: "Real" });
   seedSeries(db, cat, [1000, 1000, 1000, 1000, 1000, 1000]);
   MONTHS.forEach((m) => seedTransaction(db, { categoryId: cat, amount: -500000, billingMonth: m, section: "payment" }));
+  MONTHS.forEach((m) => seedTransaction(db, { categoryId: cat, amount: 200, billingMonth: m, section: "pat" }));
 
   const { series } = categoryTrend(db);
 
-  assert.equal(series[0].total, 6000);
+  assert.equal(series[0].total, 6000 + 200 * MONTHS.length);
 });
 
 test("window can end at an earlier month and refuses fewer than three points", () => {

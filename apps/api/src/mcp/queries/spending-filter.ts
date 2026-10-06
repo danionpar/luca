@@ -8,8 +8,11 @@ import { EFFECTIVE_SECTION_SQL } from "./section.js";
  * - Projected rows are excluded: they are future instalment payments the
  *   parser derived, not something that was actually billed.
  * - Rows without a billing month cannot be placed on a timeline.
- * - `payment` and `pat` rows are excluded: money sent to the card itself is
- *   never spending, and would otherwise show up as the biggest "category".
+ * - `payment` rows are excluded: they are payments TO the card, never
+ *   spending, and would otherwise show up as the biggest "category".
+ * - `pat` rows (Pago Automatico de Cuentas) are KEPT: they are utility and
+ *   service bills charged to the card — real, recurring spending, and the
+ *   clearest case `detect_recurring` exists to find.
  *
  * Unqualified column names, so it works against `transactions` aliased as
  * `t` or not, with or without a join to `categories`.
@@ -17,7 +20,7 @@ import { EFFECTIVE_SECTION_SQL } from "./section.js";
 export const SPENDING_ROW_FILTER = `
   is_projected = 0
   AND billing_month IS NOT NULL
-  AND (${EFFECTIVE_SECTION_SQL}) NOT IN ('payment', 'pat')
+  AND (${EFFECTIVE_SECTION_SQL}) <> 'payment'
 `;
 
 /**
